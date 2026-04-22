@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen, Shield, Sparkles } from "lucide-react";
+import { Activity, ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield, Sparkles } from "lucide-react";
 
 import webConfig from "@/constants/common-env";
 import { clearStoredAuthKey } from "@/store/auth";
@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/image", label: "图片工作台", description: "生成、编辑与放大", icon: ImageIcon },
   { href: "/accounts", label: "账号管理", description: "号池、额度与同步", icon: Shield },
+  { href: "/settings", label: "配置管理", description: "模式、接口与后端配置", icon: Settings2 },
+  { href: "/requests", label: "调用请求", description: "查看官方与 CPA 请求方向", icon: Activity },
 ];
 
 type DesktopTopNavProps = {

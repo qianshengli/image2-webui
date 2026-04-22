@@ -325,6 +325,8 @@ func firstString(data map[string]any, keys ...string) string {
 
 func stringValue(value any) string {
 	switch typed := value.(type) {
+	case nil:
+		return ""
 	case string:
 		return typed
 	case fmt.Stringer:

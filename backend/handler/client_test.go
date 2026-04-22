@@ -160,7 +160,8 @@ func TestResolveImageUpstreamModel(t *testing.T) {
 		expectedModel string
 	}{
 		{name: "default request falls back to gpt image 2 behavior", requested: "", accountType: "", expectedModel: "auto"},
-		{name: "gpt image 1 always uses auto", requested: "gpt-image-1", accountType: "Plus", expectedModel: "auto"},
+		{name: "gpt image 1 uses auto for free", requested: "gpt-image-1", accountType: "Free", expectedModel: "auto"},
+		{name: "gpt image 1 uses gpt 5 3 for paid", requested: "gpt-image-1", accountType: "Plus", expectedModel: "gpt-5-3"},
 		{name: "gpt image 2 uses auto for free", requested: "gpt-image-2", accountType: "Free", expectedModel: "auto"},
 		{name: "gpt image 2 uses auto when account type missing", requested: "gpt-image-2", accountType: "", expectedModel: "auto"},
 		{name: "gpt image 2 uses gpt 5 3 for paid", requested: "gpt-image-2", accountType: "Pro", expectedModel: "gpt-5-3"},

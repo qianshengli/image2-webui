@@ -176,7 +176,7 @@ func handleImageEdits() http.HandlerFunc {
 
 // buildImageResponse converts ImageResults to the OpenAI-compatible response format.
 // Only includes url/b64_json and revised_prompt — no internal ChatGPT fields.
-func buildImageResponse(r *http.Request, client *handler.ChatGPTClient, results []handler.ImageResult, responseFormat string, sourceAccountID string) []map[string]any {
+func buildImageResponse(r *http.Request, client imageDownloader, results []handler.ImageResult, responseFormat string, sourceAccountID string) []map[string]any {
 	data := make([]map[string]any, 0, len(results))
 	for _, img := range results {
 		item := map[string]any{

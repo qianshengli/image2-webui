@@ -132,9 +132,96 @@ export type AccountQuotaResponse = {
   refresh_error?: string;
 };
 
+export type ImageMode = "studio" | "cpa" | "mix";
+
 type ImageResponse = {
   created: number;
   data: ImageResponseItem[];
+};
+
+export type ConfigPayload = {
+  app: {
+    name: string;
+    version: string;
+    apiKey: string;
+    authKey: string;
+    imageFormat: string;
+    maxUploadSizeMB: number;
+  };
+  server: {
+    host: string;
+    port: number;
+    staticDir: string;
+  };
+  chatgpt: {
+    model: string;
+    sseTimeout: number;
+    pollInterval: number;
+    pollMaxWait: number;
+    requestTimeout: number;
+    imageMode: ImageMode;
+    freeImageRoute: string;
+    freeImageModel: string;
+    paidImageRoute: string;
+    paidImageModel: string;
+  };
+  accounts: {
+    defaultQuota: number;
+    preferRemoteRefresh: boolean;
+    refreshWorkers: number;
+  };
+  storage: {
+    authDir: string;
+    stateFile: string;
+    syncStateDir: string;
+    imageDir: string;
+  };
+  sync: {
+    enabled: boolean;
+    baseUrl: string;
+    managementKey: string;
+    requestTimeout: number;
+    concurrency: number;
+    providerType: string;
+  };
+  proxy: {
+    enabled: boolean;
+    url: string;
+    mode: string;
+    syncEnabled: boolean;
+  };
+  cpa: {
+    baseUrl: string;
+    apiKey: string;
+    requestTimeout: number;
+  };
+  log: {
+    logAllRequests: boolean;
+  };
+  paths: {
+    root: string;
+    defaults: string;
+    override: string;
+  };
+};
+
+export type RequestLogItem = {
+  id: string;
+  startedAt: string;
+  finishedAt: string;
+  endpoint: string;
+  operation: string;
+  imageMode: ImageMode | string;
+  direction: "official" | "cpa" | string;
+  route: string;
+  accountType?: string;
+  accountEmail?: string;
+  accountFile?: string;
+  requestedModel?: string;
+  upstreamModel?: string;
+  preferred: boolean;
+  success: boolean;
+  error?: string;
 };
 
 export async function login(authKey: string) {
@@ -209,6 +296,21 @@ export async function fetchAccountQuota(accountId: string, options: { refresh?: 
 
 export async function fetchSyncStatus() {
   return httpRequest<SyncStatusResponse>("/api/sync/status");
+}
+
+export async function fetchConfig() {
+  return httpRequest<ConfigPayload>("/api/config");
+}
+
+export async function updateConfig(config: ConfigPayload) {
+  return httpRequest<{ status: string; config: ConfigPayload }>("/api/config", {
+    method: "PUT",
+    body: config,
+  });
+}
+
+export async function fetchRequestLogs() {
+  return httpRequest<{ items: RequestLogItem[] }>("/api/requests");
 }
 
 export async function runSync(direction: "pull" | "push") {

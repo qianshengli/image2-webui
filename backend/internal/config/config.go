@@ -46,6 +46,11 @@ type ChatGPTConfig struct {
 	PollInterval   int    `toml:"poll_interval"`
 	PollMaxWait    int    `toml:"poll_max_wait"`
 	RequestTimeout int    `toml:"request_timeout"`
+	ImageMode      string `toml:"image_mode"`
+	FreeImageRoute string `toml:"free_image_route"`
+	FreeImageModel string `toml:"free_image_model"`
+	PaidImageRoute string `toml:"paid_image_route"`
+	PaidImageModel string `toml:"paid_image_model"`
 }
 
 type AccountsConfig struct {
@@ -81,6 +86,12 @@ type ProxyConfig struct {
 	SyncEnabled bool   `toml:"sync_enabled"`
 }
 
+type CPAConfig struct {
+	BaseURL        string `toml:"base_url"`
+	APIKey         string `toml:"api_key"`
+	RequestTimeout int    `toml:"request_timeout"`
+}
+
 type Config struct {
 	mu     sync.RWMutex `toml:"-"`
 	loadMu sync.Mutex   `toml:"-"`
@@ -95,6 +106,7 @@ type Config struct {
 	Sync     SyncConfig     `toml:"sync"`
 	Log      LogConfig      `toml:"log"`
 	Proxy    ProxyConfig    `toml:"proxy"`
+	CPA      CPAConfig      `toml:"cpa"`
 }
 
 func New(rootDir string) *Config {
@@ -221,6 +233,14 @@ func (c *Config) ResolvePath(path string) string {
 }
 
 func (c *Config) SaveOverride(section, key string, value any) error {
+	return c.SaveOverrides(map[string]map[string]any{
+		section: {
+			key: value,
+		},
+	})
+}
+
+func (c *Config) SaveOverrides(values map[string]map[string]any) error {
 	c.loadMu.Lock()
 	defer c.loadMu.Unlock()
 
@@ -231,12 +251,16 @@ func (c *Config) SaveOverride(section, key string, value any) error {
 		}
 	}
 
-	sec, ok := raw[section].(map[string]any)
-	if !ok {
-		sec = map[string]any{}
+	for section, entries := range values {
+		sec, ok := raw[section].(map[string]any)
+		if !ok {
+			sec = map[string]any{}
+		}
+		for key, value := range entries {
+			sec[key] = value
+		}
+		raw[section] = sec
 	}
-	sec[key] = value
-	raw[section] = sec
 
 	if err := os.MkdirAll(filepath.Dir(c.paths.Override), 0o755); err != nil {
 		return fmt.Errorf("create config dir: %w", err)
@@ -313,6 +337,7 @@ func (c *Config) copyFrom(other *Config) {
 	c.Sync = other.Sync
 	c.Log = other.Log
 	c.Proxy = other.Proxy
+	c.CPA = other.CPA
 	c.paths = other.paths
 }
 
@@ -326,6 +351,34 @@ func (c *Config) SyncProxyURL() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.proxyURLLocked(true)
+}
+
+func (c *Config) CPAImageBaseURL() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if trimmed := strings.TrimSpace(c.CPA.BaseURL); trimmed != "" {
+		return trimmed
+	}
+	return strings.TrimSpace(c.Sync.BaseURL)
+}
+
+func (c *Config) CPAImageAPIKey() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return strings.TrimSpace(c.CPA.APIKey)
+}
+
+func (c *Config) CPAImageConfigured() bool {
+	return c.CPAImageBaseURL() != "" && c.CPAImageAPIKey() != ""
+}
+
+func (c *Config) CPAImageRequestTimeout() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.CPA.RequestTimeout > 0 {
+		return c.CPA.RequestTimeout
+	}
+	return 60
 }
 
 func (c *Config) proxyURLLocked(forSync bool) string {
@@ -342,6 +395,26 @@ func (c *Config) proxyURLLocked(forSync bool) string {
 }
 
 func (c *Config) validate() error {
+	if normalized, ok := normalizeImageMode(c.ChatGPT.ImageMode); !ok {
+		return fmt.Errorf("invalid chatgpt.image_mode %q: only studio, cpa or mix are supported", strings.TrimSpace(c.ChatGPT.ImageMode))
+	} else {
+		c.ChatGPT.ImageMode = normalized
+	}
+
+	for _, item := range []struct {
+		name  string
+		value string
+	}{
+		{name: "chatgpt.free_image_route", value: c.ChatGPT.FreeImageRoute},
+		{name: "chatgpt.paid_image_route", value: c.ChatGPT.PaidImageRoute},
+	} {
+		if normalized, ok := normalizeImageRoute(item.value); !ok {
+			return fmt.Errorf("invalid %s %q: only legacy or responses are supported", item.name, strings.TrimSpace(item.value))
+		} else if normalized == "" {
+			return fmt.Errorf("invalid %s %q", item.name, strings.TrimSpace(item.value))
+		}
+	}
+
 	if !c.Proxy.Enabled {
 		return nil
 	}
@@ -367,6 +440,34 @@ func normalizeProxyMode(mode string) string {
 		return "fixed"
 	}
 	return normalized
+}
+
+func normalizeImageRoute(route string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(route)) {
+	case "", "legacy", "conversation":
+		return "legacy", true
+	case "responses":
+		return "responses", true
+	default:
+		return "", false
+	}
+}
+
+func normalizeImageMode(mode string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "", "studio":
+		return "studio", true
+	case "cpa":
+		return "cpa", true
+	case "mix":
+		return "mix", true
+	default:
+		return "", false
+	}
+}
+
+func NormalizeImageModeForAPI(mode string) (string, bool) {
+	return normalizeImageMode(mode)
 }
 
 func decodeOverrideFile(path string, target *Config) error {

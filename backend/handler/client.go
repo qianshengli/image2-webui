@@ -60,22 +60,40 @@ func NewChatGPTClientWithProxy(accessToken, cookies, proxyURL string) *ChatGPTCl
 }
 
 func ResolveImageUpstreamModel(requestedModel, accountType string) string {
+	return ResolveImageUpstreamModelWithDefaults(requestedModel, accountType, "auto", defaultUpstreamModel)
+}
+
+func ResolveImageUpstreamModelWithDefaults(requestedModel, accountType, freeModel, paidModel string) string {
 	model := strings.TrimSpace(requestedModel)
 	if model == "" {
 		model = "gpt-image-2"
 	}
 
+	freeModel = normalizeImageRouteModel(freeModel, "auto")
+	paidModel = normalizeImageRouteModel(paidModel, defaultUpstreamModel)
+
 	switch model {
 	case "gpt-image-1":
-		return "auto"
+		if strings.TrimSpace(accountType) == "" || strings.EqualFold(strings.TrimSpace(accountType), "Free") {
+			return freeModel
+		}
+		return paidModel
 	case "gpt-image-2":
 		if strings.TrimSpace(accountType) == "" || strings.EqualFold(strings.TrimSpace(accountType), "Free") {
-			return "auto"
+			return freeModel
 		}
-		return defaultUpstreamModel
+		return paidModel
 	default:
 		return model
 	}
+}
+
+func normalizeImageRouteModel(value, fallback string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return fallback
+	}
+	return trimmed
 }
 
 // GenerateImage creates a new image from a text prompt.

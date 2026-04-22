@@ -8,15 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"chatgpt2api/handler"
 )
 
 const imageDir = "data/tmp/image"
 
-// downloadAndCache downloads an upstream image using the ChatGPT client's transport
+// downloadAndCache downloads an upstream image using the image client's transport
 // (Chrome TLS fingerprint), saves to local disk, and returns the local filename.
-func downloadAndCache(client *handler.ChatGPTClient, upstreamURL string) (string, error) {
+func downloadAndCache(client imageDownloader, upstreamURL string) (string, error) {
 	// Generate a stable filename from the URL
 	hash := sha256.Sum256([]byte(upstreamURL))
 	filename := fmt.Sprintf("%x.png", hash[:12])

@@ -28,6 +28,7 @@ ChatGpt Image Studio 是一个单仓库交付的图片工作流项目：
 - 参考图生成与连续编辑
 - 选区涂抹式局部重绘
 - 图片放大与增强
+- 兼容图片场景的 `/v1/chat/completions` 与 `/v1/responses`
 - 本地认证文件导入与账号池管理
 - 额度查询与刷新
 - 与 CLIProxyAPI 兼容的 CPA 双向同步
@@ -108,6 +109,38 @@ sync_enabled = false
 - 当前仅支持固定代理模式 `fixed`
 - `url` 支持 `socks5`、`socks5h`、`http`、`https`
 - `sync_enabled = true` 时，CPA 同步请求也会复用同一代理
+
+如果需要调整 `Free` / `Plus / Pro / Team` 账号的图片链路，可在 `[chatgpt]` 下补充：
+
+```toml
+[chatgpt]
+free_image_route = "legacy"
+free_image_model = "auto"
+paid_image_route = "responses"
+paid_image_model = "gpt-5-3"
+```
+
+说明：
+
+- `free_image_route`
+  控制 `Free` 账号图片请求走哪条链路。
+  `legacy` 表示走当前项目原有的 `/backend-api/conversation` 流程；
+  `responses` 表示走官方 `https://chatgpt.com/backend-api/codex/responses` 流程。
+- `free_image_model`
+  控制 `Free` 账号真正发给上游的模型名。默认 `auto`，表示保留旧行为，让上游自动选择兼容模型。
+- `paid_image_route`
+  控制 `Plus / Pro / Team` 账号图片请求走哪条链路。默认 `responses`。
+- `paid_image_model`
+  控制 `Plus / Pro / Team` 账号真正发给上游的模型名。默认 `gpt-5-3`，也可以改成 `gpt-5.4`。
+
+当前默认建议：
+
+- `Free` 账号保持 `free_image_route = "legacy"`，因为 `Free` 账号走 `responses + image_generation` 通常会遇到权限限制。
+- `Plus / Pro / Team` 账号默认使用 `paid_image_route = "responses"`，也就是优先走 `responses` 链路。
+- paid 的编辑图 / 超分虽然支持走 `responses`，但当前后端只会在“单图且请求体足够小”时自动切到 `responses`；大图、多图、较大 mask 会自动回退到旧链路，避免请求体过大。
+
+> [!WARNING]
+> 当前默认的 paid 图像链路会让 `Plus / Pro / Team` 账号优先走 `responses` 接口，但这条默认路径目前只完成了代码级与单元测试级验证，尚未经过真实付费账号的端到端实测。上线前建议先用非重要付费号做一次完整 smoke test。
 
 ### 2. 启动开发环境
 

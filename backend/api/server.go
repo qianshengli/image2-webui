@@ -28,6 +28,7 @@ type Server struct {
 	store      *accounts.Store
 	syncClient *cliproxy.Client
 	staticDir  string
+	reqLogs    *imageRequestLogStore
 }
 
 type requestError struct {
@@ -45,6 +46,7 @@ func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.C
 		store:      store,
 		syncClient: syncClient,
 		staticDir:  cfg.ResolvePath(cfg.Server.StaticDir),
+		reqLogs:    newImageRequestLogStore(),
 	}
 }
 
@@ -62,12 +64,17 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/accounts", s.requireUIAuth(http.HandlerFunc(s.handleDeleteAccounts)))
 	mux.Handle("POST /api/accounts/refresh", s.requireUIAuth(http.HandlerFunc(s.handleRefreshAccounts)))
 	mux.Handle("POST /api/accounts/update", s.requireUIAuth(http.HandlerFunc(s.handleUpdateAccount)))
+	mux.Handle("GET /api/config", s.requireUIAuth(http.HandlerFunc(s.handleGetConfig)))
+	mux.Handle("PUT /api/config", s.requireUIAuth(http.HandlerFunc(s.handleUpdateConfig)))
+	mux.Handle("GET /api/requests", s.requireUIAuth(http.HandlerFunc(s.handleListRequestLogs)))
 	mux.Handle("GET /api/sync/status", s.requireUIAuth(http.HandlerFunc(s.handleSyncStatus)))
 	mux.Handle("POST /api/sync/run", s.requireUIAuth(http.HandlerFunc(s.handleRunSync)))
 
 	mux.Handle("POST /v1/images/generations", s.requireImageAuth(http.HandlerFunc(s.handleImageGenerations)))
 	mux.Handle("POST /v1/images/edits", s.requireImageAuth(http.HandlerFunc(s.handleImageEdits)))
 	mux.Handle("POST /v1/images/upscale", s.requireImageAuth(http.HandlerFunc(s.handleImageUpscale)))
+	mux.Handle("POST /v1/chat/completions", s.requireImageAuth(http.HandlerFunc(s.handleImageChatCompletions)))
+	mux.Handle("POST /v1/responses", s.requireImageAuth(http.HandlerFunc(s.handleImageResponses)))
 	mux.Handle("GET /v1/models", s.requireImageAuth(http.HandlerFunc(s.handleModels)))
 	mux.Handle("GET /v1/files/image/", handleImageFile())
 
@@ -385,29 +392,18 @@ func (s *Server) handleImageGenerations(w http.ResponseWriter, r *http.Request) 
 		req.N = 1
 	}
 
-	requestedModel := normalizeRequestedImageModel(req.Model, s.cfg.ChatGPT.Model)
-	responseFormat := firstNonEmpty(req.ResponseFormat, s.cfg.App.ImageFormat, "url")
-	combined := make([]map[string]any, 0, req.N)
-	imageErrors := make([]string, 0)
-	for range req.N {
-		data, err := s.withImageResults(r.Context(), responseFormat, "", requestedModel, func(client *handler.ChatGPTClient, upstreamModel string) ([]handler.ImageResult, error) {
-			return client.GenerateImage(r.Context(), req.Prompt, upstreamModel, 1, req.Size, req.Quality, req.Background)
-		}, r)
-		if err != nil {
-			imageErrors = append(imageErrors, err.Error())
-			continue
-		}
-		combined = append(combined, data...)
-	}
-
-	if len(combined) == 0 {
-		writeImageRequestError(w, errors.New(firstNonEmpty(strings.Join(imageErrors, "; "), "image generation failed")))
+	payload, err := s.executeImageGeneration(r.Context(), imageGenerationRequest{
+		Model:          req.Model,
+		Prompt:         req.Prompt,
+		N:              req.N,
+		Size:           req.Size,
+		Quality:        req.Quality,
+		Background:     req.Background,
+		ResponseFormat: req.ResponseFormat,
+	}, r)
+	if err != nil {
+		writeImageRequestError(w, err)
 		return
-	}
-
-	payload := map[string]any{"created": time.Now().Unix(), "data": combined}
-	if len(imageErrors) > 0 {
-		payload["errors"] = imageErrors
 	}
 	writeJSON(w, http.StatusOK, payload)
 }
@@ -438,7 +434,7 @@ func (s *Server) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "mask is required for selection edit"})
 			return
 		}
-		data, err = s.withImageResults(r.Context(), responseFormat, inpaintRequest.sourceAccountID, requestedModel, func(client *handler.ChatGPTClient, upstreamModel string) ([]handler.ImageResult, error) {
+		data, err = s.withImageResults(r.Context(), "selection-edit", responseFormat, inpaintRequest.sourceAccountID, requestedModel, false, func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			return client.InpaintImageByMask(
 				r.Context(),
 				prompt,
@@ -461,9 +457,18 @@ func (s *Server) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		data, err = s.withImageResults(r.Context(), responseFormat, "", requestedModel, func(client *handler.ChatGPTClient, upstreamModel string) ([]handler.ImageResult, error) {
-			return client.EditImageByUpload(r.Context(), prompt, upstreamModel, images, mask)
+		payload, execErr := s.executeImageEdit(r.Context(), imageEditRequest{
+			Model:          requestedModel,
+			Prompt:         prompt,
+			Images:         images,
+			Mask:           mask,
+			ResponseFormat: responseFormat,
 		}, r)
+		if execErr != nil {
+			err = execErr
+		} else {
+			data = compatResponseDataItems(payload)
+		}
 	}
 	if err != nil {
 		writeImageRequestError(w, err)
@@ -497,7 +502,7 @@ func (s *Server) handleImageUpscale(w http.ResponseWriter, r *http.Request) {
 	requestedModel := normalizeRequestedImageModel(r.FormValue("model"), s.cfg.ChatGPT.Model)
 	responseFormat := firstNonEmpty(r.FormValue("response_format"), s.cfg.App.ImageFormat, "url")
 
-	data, err := s.withImageResults(r.Context(), responseFormat, "", requestedModel, func(client *handler.ChatGPTClient, upstreamModel string) ([]handler.ImageResult, error) {
+	data, err := s.withImageResults(r.Context(), "upscale", responseFormat, "", requestedModel, handler.SupportsResponsesInlineEdit([][]byte{images[0]}, nil), func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 		return client.EditImageByUpload(r.Context(), prompt, upstreamModel, [][]byte{images[0]}, nil)
 	}, r)
 	if err != nil {
@@ -507,7 +512,7 @@ func (s *Server) handleImageUpscale(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"created": time.Now().Unix(), "data": data})
 }
 
-func (s *Server) withImageResults(ctx context.Context, responseFormat, preferredAccountID, requestedModel string, run func(client *handler.ChatGPTClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, error) {
+func (s *Server) withImageResults(ctx context.Context, operation, responseFormat, preferredAccountID, requestedModel string, responsesEligible bool, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, error) {
 	if strings.TrimSpace(preferredAccountID) != "" {
 		authFile, account, err := s.store.FindImageAuthByID(preferredAccountID)
 		if err != nil {
@@ -516,7 +521,7 @@ func (s *Server) withImageResults(ctx context.Context, responseFormat, preferred
 			}
 			return nil, err
 		}
-		data, _, err := s.runImageRequest(ctx, authFile, account, responseFormat, true, requestedModel, run, r)
+		data, _, err := s.runImageRequest(ctx, authFile, account, operation, responseFormat, true, requestedModel, responsesEligible, run, r)
 		return data, err
 	}
 
@@ -528,7 +533,7 @@ func (s *Server) withImageResults(ctx context.Context, responseFormat, preferred
 		}
 		attempted[authFile.AccessToken] = struct{}{}
 
-		data, retryable, err := s.runImageRequest(ctx, authFile, account, responseFormat, false, requestedModel, run, r)
+		data, retryable, err := s.runImageRequest(ctx, authFile, account, operation, responseFormat, false, requestedModel, responsesEligible, run, r)
 		if retryable && len(attempted) < 64 {
 			continue
 		}
@@ -536,7 +541,8 @@ func (s *Server) withImageResults(ctx context.Context, responseFormat, preferred
 	}
 }
 
-func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAuth, account accounts.PublicAccount, responseFormat string, preferredAccount bool, requestedModel string, run func(client *handler.ChatGPTClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, bool, error) {
+func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAuth, account accounts.PublicAccount, operation, responseFormat string, preferredAccount bool, requestedModel string, responsesEligible bool, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, bool, error) {
+	startedAt := time.Now()
 	refreshRequired := accounts.NeedsImageQuotaRefresh(account, time.Now())
 	if refreshRequired {
 		_, refreshErrors, refreshErr := s.store.RefreshAccounts(ctx, []string{authFile.AccessToken})
@@ -580,15 +586,106 @@ func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAu
 		return nil, false, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，请使用普通编辑重试")
 	}
 
-	client := handler.NewChatGPTClientWithProxy(
-		authFile.AccessToken,
-		firstNonEmpty(stringValue(authFile.Data["cookies"]), stringValue(authFile.Data["cookie"])),
-		s.cfg.ChatGPTProxyURL(),
+	mode := s.configuredImageMode()
+	var (
+		client        imageWorkflowClient
+		upstreamModel string
+		route         string
+		direction     string
 	)
-	upstreamModel := handler.ResolveImageUpstreamModel(requestedModel, account.Type)
+	if shouldUseCPAImageRoute(mode, account.Type) {
+		if account.Type == "Free" {
+			err := newRequestError("cpa_free_image_unsupported", "CPA 模式下 Free 账号无图片权限")
+			s.logImageRequest(imageRequestLogEntry{
+				StartedAt:      startedAt.Format(time.RFC3339Nano),
+				FinishedAt:     time.Now().Format(time.RFC3339Nano),
+				Endpoint:       r.URL.Path,
+				Operation:      operation,
+				ImageMode:      mode,
+				Direction:      "cpa",
+				Route:          "cpa",
+				AccountType:    account.Type,
+				AccountEmail:   account.Email,
+				AccountFile:    authFile.Name,
+				RequestedModel: requestedModel,
+				Preferred:      preferredAccount,
+				Success:        false,
+				Error:          err.Error(),
+			})
+			if preferredAccount {
+				return nil, false, err
+			}
+			return nil, true, err
+		}
+		if !s.cfg.CPAImageConfigured() {
+			err := newRequestError("cpa_image_not_configured", "CPA 图片接口还未配置，请先在配置管理中设置 CPA base_url 与 api_key")
+			s.logImageRequest(imageRequestLogEntry{
+				StartedAt:      startedAt.Format(time.RFC3339Nano),
+				FinishedAt:     time.Now().Format(time.RFC3339Nano),
+				Endpoint:       r.URL.Path,
+				Operation:      operation,
+				ImageMode:      mode,
+				Direction:      "cpa",
+				Route:          "cpa",
+				AccountType:    account.Type,
+				AccountEmail:   account.Email,
+				AccountFile:    authFile.Name,
+				RequestedModel: requestedModel,
+				Preferred:      preferredAccount,
+				Success:        false,
+				Error:          err.Error(),
+			})
+			if mode == "mix" && !preferredAccount {
+				return nil, true, err
+			}
+			return nil, false, err
+		}
+		client = newCPAImageClient(
+			s.cfg.CPAImageBaseURL(),
+			s.cfg.CPAImageAPIKey(),
+			time.Duration(max(10, s.cfg.CPAImageRequestTimeout()))*time.Second,
+		)
+		upstreamModel = normalizeRequestedImageModel(requestedModel, s.cfg.ChatGPT.Model)
+		route = "cpa"
+		direction = "cpa"
+	} else {
+		route = s.configuredImageRoute(account.Type)
+		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
+		direction = "official"
+		if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
+			client = handler.NewResponsesClientWithProxy(
+				authFile.AccessToken,
+				s.cfg.ChatGPTProxyURL(),
+				authFile.Data,
+			)
+		} else {
+			client = handler.NewChatGPTClientWithProxy(
+				authFile.AccessToken,
+				firstNonEmpty(stringValue(authFile.Data["cookies"]), stringValue(authFile.Data["cookie"])),
+				s.cfg.ChatGPTProxyURL(),
+			)
+		}
+	}
 	results, err := run(client, upstreamModel)
 	if err != nil {
 		s.store.RecordImageResult(authFile.AccessToken, false)
+		s.logImageRequest(imageRequestLogEntry{
+			StartedAt:      startedAt.Format(time.RFC3339Nano),
+			FinishedAt:     time.Now().Format(time.RFC3339Nano),
+			Endpoint:       r.URL.Path,
+			Operation:      operation,
+			ImageMode:      mode,
+			Direction:      direction,
+			Route:          route,
+			AccountType:    account.Type,
+			AccountEmail:   account.Email,
+			AccountFile:    authFile.Name,
+			RequestedModel: requestedModel,
+			UpstreamModel:  upstreamModel,
+			Preferred:      preferredAccount,
+			Success:        false,
+			Error:          err.Error(),
+		})
 		if isInvalidImageTokenError(err) {
 			s.store.MarkImageTokenAbnormal(authFile.AccessToken)
 			if preferredAccount {
@@ -603,6 +700,22 @@ func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAu
 	}
 
 	s.store.RecordImageResult(authFile.AccessToken, true)
+	s.logImageRequest(imageRequestLogEntry{
+		StartedAt:      startedAt.Format(time.RFC3339Nano),
+		FinishedAt:     time.Now().Format(time.RFC3339Nano),
+		Endpoint:       r.URL.Path,
+		Operation:      operation,
+		ImageMode:      mode,
+		Direction:      direction,
+		Route:          route,
+		AccountType:    account.Type,
+		AccountEmail:   account.Email,
+		AccountFile:    authFile.Name,
+		RequestedModel: requestedModel,
+		UpstreamModel:  upstreamModel,
+		Preferred:      preferredAccount,
+		Success:        true,
+	})
 	return buildImageResponse(r, client, results, responseFormat, account.ID), false, nil
 }
 
@@ -978,6 +1091,81 @@ func isImageAccountUsable(account accounts.PublicAccount) bool {
 		account.Status != "异常" &&
 		account.Status != "限流" &&
 		account.Quota > 0
+}
+
+func (s *Server) configuredImageMode() string {
+	if normalized, ok := config.NormalizeImageModeForAPI(s.cfg.ChatGPT.ImageMode); ok {
+		return normalized
+	}
+	return "studio"
+}
+
+func shouldUseCPAImageRoute(mode, accountType string) bool {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "cpa":
+		return true
+	case "mix":
+		return isPaidImageAccountType(accountType)
+	default:
+		return false
+	}
+}
+
+func isPaidImageAccountType(accountType string) bool {
+	switch strings.TrimSpace(accountType) {
+	case "Plus", "Pro", "Team":
+		return true
+	default:
+		return false
+	}
+}
+
+func shouldUseOfficialResponses(preferredAccount bool, responsesEligible bool, configuredRoute string) bool {
+	if preferredAccount {
+		return false
+	}
+	if !responsesEligible {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(configuredRoute), "responses")
+}
+
+func (s *Server) configuredImageRoute(accountType string) string {
+	switch strings.TrimSpace(accountType) {
+	case "Plus", "Pro", "Team":
+		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.PaidImageRoute, "responses")
+	default:
+		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.FreeImageRoute, "legacy")
+	}
+}
+
+func (s *Server) resolveImageUpstreamModel(requestedModel, accountType string) string {
+	return handler.ResolveImageUpstreamModelWithDefaults(
+		requestedModel,
+		accountType,
+		s.cfg.ChatGPT.FreeImageModel,
+		s.cfg.ChatGPT.PaidImageModel,
+	)
+}
+
+func normalizeConfiguredImageRoute(value, fallback string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "":
+		return strings.ToLower(strings.TrimSpace(fallback))
+	case "legacy", "conversation":
+		return "legacy"
+	case "responses":
+		return "responses"
+	default:
+		return strings.ToLower(strings.TrimSpace(fallback))
+	}
+}
+
+func (s *Server) logImageRequest(entry imageRequestLogEntry) {
+	if s == nil || s.reqLogs == nil {
+		return
+	}
+	s.reqLogs.add(entry)
 }
 
 func isStaticAssetRequest(path string) bool {
