@@ -33,7 +33,13 @@ var accountTypeMap = map[string]string{
 	"enterprise": "Team",
 }
 
+const proFallbackImageGenQuota = 999
+
 func FetchAccountInfo(ctx context.Context, accessToken string, authData map[string]any, timeout time.Duration) (*RemoteAccountInfo, error) {
+	return FetchAccountInfoWithProxy(ctx, accessToken, authData, timeout, "")
+}
+
+func FetchAccountInfoWithProxy(ctx context.Context, accessToken string, authData map[string]any, timeout time.Duration, proxyURL string) (*RemoteAccountInfo, error) {
 	if strings.TrimSpace(accessToken) == "" {
 		return nil, fmt.Errorf("access token is required")
 	}
@@ -43,7 +49,7 @@ func FetchAccountInfo(ctx context.Context, accessToken string, authData map[stri
 
 	client := &http.Client{
 		Timeout:   timeout,
-		Transport: newChromeTransport(),
+		Transport: newChromeTransport(proxyURL),
 	}
 
 	meHeaders := buildAccountHeaders(accessToken, authData)
@@ -96,6 +102,14 @@ func FetchAccountInfo(ctx context.Context, accessToken string, authData map[stri
 
 	limitsProgress := normalizeLimitsProgress(initResp.payload["limits_progress"])
 	quota, restoreAt := extractQuotaAndRestoreAt(limitsProgress)
+	accountType := detectAccountType(accessToken, meResp.payload, initResp.payload)
+	if accountType == "Pro" && !hasLimitFeature(limitsProgress, "image_gen") {
+		quota = proFallbackImageGenQuota
+		limitsProgress = append(limitsProgress, map[string]any{
+			"feature_name": "image_gen",
+			"remaining":    quota,
+		})
+	}
 	status := "正常"
 	if quota == 0 {
 		status = "限流"
@@ -104,7 +118,7 @@ func FetchAccountInfo(ctx context.Context, accessToken string, authData map[stri
 	return &RemoteAccountInfo{
 		Email:            stringValue(meResp.payload["email"]),
 		UserID:           stringValue(meResp.payload["id"]),
-		AccountType:      detectAccountType(accessToken, meResp.payload, initResp.payload),
+		AccountType:      accountType,
 		Quota:            quota,
 		LimitsProgress:   limitsProgress,
 		DefaultModelSlug: stringValue(initResp.payload["default_model_slug"]),
@@ -280,6 +294,17 @@ func extractQuotaAndRestoreAt(items []map[string]any) (int, string) {
 		return intValue(item["remaining"]), stringValue(item["reset_after"])
 	}
 	return 0, ""
+}
+
+func hasLimitFeature(items []map[string]any, featureName string) bool {
+	target := strings.TrimSpace(strings.ToLower(featureName))
+	for _, item := range items {
+		if strings.TrimSpace(strings.ToLower(stringValue(item["feature_name"]))) != target {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func stringOrDefault(data map[string]any, key, fallback string) string {

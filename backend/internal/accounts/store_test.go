@@ -3,6 +3,7 @@ package accounts
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -177,5 +178,56 @@ func TestImportAuthFilesKeepsNewerByIdentityAndType(t *testing.T) {
 	}
 	if got := stringValue(stored["access_token"]); got != "token-new" {
 		t.Fatalf("expected overwritten access_token token-new, got %s", got)
+	}
+}
+
+func TestBuildPublicAccountFallsBackProImageQuotaWhenLimitMissing(t *testing.T) {
+	store := &Store{
+		defaultQuota: 5,
+		providerType: "codex",
+		states: map[string]RuntimeState{
+			"pro.json": {
+				Type:           "Pro",
+				Status:         "限流",
+				Quota:          0,
+				QuotaKnown:     true,
+				LimitsProgress: nil,
+			},
+		},
+	}
+
+	got := store.buildPublicAccount(
+		LocalAuth{
+			Name:        "pro.json",
+			AccessToken: "token-1",
+			Provider:    "codex",
+			Data:        map[string]any{},
+		},
+		SyncState{},
+		nil,
+	)
+
+	if got.Type != "Pro" {
+		t.Fatalf("expected type Pro, got %q", got.Type)
+	}
+	if got.Quota != proFallbackImageGenQuota {
+		t.Fatalf("expected quota %d, got %d", proFallbackImageGenQuota, got.Quota)
+	}
+	if got.Status != "正常" {
+		t.Fatalf("expected status 正常, got %q", got.Status)
+	}
+
+	hasImageGen := false
+	for _, item := range got.LimitsProgress {
+		if strings.TrimSpace(strings.ToLower(stringValue(item["feature_name"]))) != "image_gen" {
+			continue
+		}
+		hasImageGen = true
+		if gotRemaining := intValue(item["remaining"]); gotRemaining != proFallbackImageGenQuota {
+			t.Fatalf("expected image_gen remaining %d, got %d", proFallbackImageGenQuota, gotRemaining)
+		}
+	}
+	if !hasImageGen {
+		t.Fatal("expected limits_progress to include image_gen")
 	}
 }

@@ -36,7 +36,7 @@ func main() {
 	}
 
 	syncTimeout := time.Duration(max(10, cfg.Sync.RequestTimeout)) * time.Second
-	syncClient := cliproxy.New(cfg.Sync.BaseURL, cfg.Sync.ManagementKey, cfg.Sync.ProviderType, syncTimeout)
+	syncClient := cliproxy.New(cfg.Sync.Enabled, cfg.Sync.BaseURL, cfg.Sync.ManagementKey, cfg.Sync.ProviderType, syncTimeout, cfg.SyncProxyURL())
 
 	host := envString("SERVER_HOST", cfg.Server.Host)
 	port := envInt("SERVER_PORT", cfg.Server.Port)

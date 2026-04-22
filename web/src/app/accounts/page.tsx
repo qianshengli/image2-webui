@@ -563,12 +563,30 @@ export default function AccountsPage() {
 
   return (
     <div className="hide-scrollbar min-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-5 sm:py-6 lg:h-full lg:min-h-0 lg:px-6 lg:py-7">
-      <section className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="text-xs font-semibold tracking-[0.18em] text-stone-500 uppercase">
             Account Pool
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">号池管理</h1>
+        </div>
+        <div className="relative self-start text-amber-950">
+          <div
+            tabIndex={0}
+            className="group inline-flex cursor-default items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium outline-none transition-colors hover:border-amber-300 hover:bg-amber-100 focus-visible:border-amber-300 focus-visible:bg-amber-100"
+          >
+            <CircleAlert className="size-4 shrink-0" />
+            <span>导入与使用可能风险提示</span>
+            <div className="pointer-events-none absolute top-full right-0 z-30 mt-3 w-80 max-w-[calc(100vw-2rem)] translate-y-1 rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm leading-6 text-stone-700 opacity-0 shadow-[0_18px_50px_-24px_rgba(120,53,15,0.45)] transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:pointer-events-auto group-focus-visible:translate-y-0 group-focus-visible:opacity-100 sm:w-96">
+              <div className="absolute top-0 right-6 size-3 -translate-y-1/2 rotate-45 border-t border-l border-amber-200 bg-white" />
+              <div>
+                账号导入、轮换与调用仅限合法合规用途，严禁用于违法违规、批量滥用、套利倒卖或其他违反平台规则的行为。
+              </div>
+              <div className="mt-2">
+                请尽量使用不常用的小号进行测试，不要导入自己的重要账号、常用账号或高价值账号；使用本项目存在账号受限、临时封禁或永久封禁的风险，相关后果需自行承担。
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -847,19 +865,6 @@ export default function AccountsPage() {
               {isImporting ? <LoaderCircle className="size-4 animate-spin" /> : <FileUp className="size-4" />}
               导入认证文件
             </Button>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-950">
-          <div className="flex items-center gap-2 font-medium">
-            <CircleAlert className="size-4" />
-            导入与使用风险提示
-          </div>
-          <div className="mt-2">
-            账号导入、轮换与调用仅限合法合规用途，严禁用于违法违规、批量滥用、套利倒卖或其他违反平台规则的行为。
-          </div>
-          <div className="mt-1">
-            请尽量使用不常用的小号进行测试，不要导入自己的重要账号、常用账号或高价值账号；使用本项目存在账号受限、临时封禁或永久封禁的风险，相关后果需自行承担。
           </div>
         </div>
 

@@ -21,6 +21,8 @@ import (
 	"chatgpt2api/internal/config"
 )
 
+const proFallbackImageGenQuota = 999
+
 type LocalAuth struct {
 	Name        string
 	Path        string
@@ -512,7 +514,7 @@ func (s *Store) RefreshAccounts(ctx context.Context, accessTokens []string) (int
 					continue
 				}
 				timeout := time.Duration(max(10, s.cfg.ChatGPT.RequestTimeout)) * time.Second
-				info, err := handler.FetchAccountInfo(ctx, token, auth.Data, timeout)
+				info, err := handler.FetchAccountInfoWithProxy(ctx, token, auth.Data, timeout, s.cfg.ChatGPTProxyURL())
 				results <- refreshResult{token: token, info: info, err: err}
 			}
 		}()
@@ -1106,6 +1108,7 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 	if !state.QuotaKnown {
 		quota = s.defaultQuota
 	}
+	limitsProgress := cloneSlice(state.LimitsProgress)
 	status := strings.TrimSpace(state.Status)
 	if auth.Disabled {
 		status = "禁用"
@@ -1114,6 +1117,28 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 			status = "限流"
 		} else {
 			status = "正常"
+		}
+	}
+
+	if accountType == "Pro" {
+		hasImageGen := false
+		for _, item := range limitsProgress {
+			if strings.TrimSpace(strings.ToLower(stringValue(item["feature_name"]))) == "image_gen" {
+				hasImageGen = true
+				break
+			}
+		}
+		if !hasImageGen {
+			if !state.QuotaKnown || quota == 0 {
+				quota = proFallbackImageGenQuota
+			}
+			limitsProgress = append(limitsProgress, map[string]any{
+				"feature_name": "image_gen",
+				"remaining":    quota,
+			})
+			if !auth.Disabled && status == "限流" {
+				status = "正常"
+			}
 		}
 	}
 
@@ -1133,7 +1158,7 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 		Quota:            max(0, quota),
 		Email:            firstNonEmpty(state.Email, auth.Email),
 		UserID:           firstNonEmpty(state.UserID, auth.UserID),
-		LimitsProgress:   cloneSlice(state.LimitsProgress),
+		LimitsProgress:   limitsProgress,
 		DefaultModelSlug: state.DefaultModelSlug,
 		RestoreAt:        state.RestoreAt,
 		Success:          state.Success,

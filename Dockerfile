@@ -22,8 +22,7 @@ RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
 WORKDIR /app/backend
 
 COPY --from=backend-builder /out/chatgpt2api-studio /app/backend/chatgpt2api-studio
-COPY backend/config.defaults.toml /app/backend/config.defaults.toml
-COPY backend/data/config.toml.example /app/backend/data/config.toml.example
+COPY backend/data/config.defaults.toml /app/backend/data/config.defaults.toml
 COPY --from=web-builder /workspace/web/out /app/web/out
 
 RUN mkdir -p /app/backend/data/auths /app/backend/data/sync_state /app/backend/data/tmp/image

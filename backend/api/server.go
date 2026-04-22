@@ -580,7 +580,11 @@ func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAu
 		return nil, false, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，请使用普通编辑重试")
 	}
 
-	client := handler.NewChatGPTClient(authFile.AccessToken, firstNonEmpty(stringValue(authFile.Data["cookies"]), stringValue(authFile.Data["cookie"])))
+	client := handler.NewChatGPTClientWithProxy(
+		authFile.AccessToken,
+		firstNonEmpty(stringValue(authFile.Data["cookies"]), stringValue(authFile.Data["cookie"])),
+		s.cfg.ChatGPTProxyURL(),
+	)
 	upstreamModel := handler.ResolveImageUpstreamModel(requestedModel, account.Type)
 	results, err := run(client, upstreamModel)
 	if err != nil {

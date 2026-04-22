@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"chatgpt2api/internal/outboundproxy"
+
 	"github.com/google/uuid"
 )
 
@@ -37,16 +39,22 @@ type ChatGPTClient struct {
 	cookies     string
 	oaiDeviceID string
 	httpClient  *http.Client
+	proxyURL    string
 }
 
 func NewChatGPTClient(accessToken, cookies string) *ChatGPTClient {
+	return NewChatGPTClientWithProxy(accessToken, cookies, "")
+}
+
+func NewChatGPTClientWithProxy(accessToken, cookies, proxyURL string) *ChatGPTClient {
 	return &ChatGPTClient{
 		accessToken: accessToken,
 		cookies:     cookies,
 		oaiDeviceID: uuid.NewString(),
+		proxyURL:    strings.TrimSpace(proxyURL),
 		httpClient: &http.Client{
 			Timeout:   sseTimeout + 30*time.Second,
-			Transport: newChromeTransport(),
+			Transport: newChromeTransport(proxyURL),
 		},
 	}
 }
@@ -193,7 +201,14 @@ func (c *ChatGPTClient) uploadFile(ctx context.Context, data []byte, filename, m
 	uploadReq.Header.Set("x-ms-blob-type", "BlockBlob")
 	uploadReq.Header.Set("Content-Type", mimeType)
 
-	plainClient := &http.Client{Timeout: 60 * time.Second}
+	plainTransport, err := outboundproxy.NewHTTPTransport(c.proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("create upload transport: %w", err)
+	}
+	plainClient := &http.Client{
+		Timeout:   60 * time.Second,
+		Transport: plainTransport,
+	}
 	uploadResp, err := plainClient.Do(uploadReq)
 	if err != nil {
 		return nil, fmt.Errorf("blob upload request: %w", err)

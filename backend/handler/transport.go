@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
+
+	"chatgpt2api/internal/outboundproxy"
 
 	utls "github.com/refraction-networking/utls"
 	"golang.org/x/net/http2"
@@ -13,18 +16,33 @@ import (
 
 // newChromeTransport returns an http.RoundTripper that mimics Chrome's TLS fingerprint
 // and properly supports HTTP/2.
-func newChromeTransport() http.RoundTripper {
-	return &chromeTransport{}
+func newChromeTransport(proxyURL ...string) http.RoundTripper {
+	configuredProxyURL := firstProxyURL(proxyURL...)
+	fallbackTransport, err := outboundproxy.NewHTTPTransport(configuredProxyURL)
+	if err != nil {
+		panic(err)
+	}
+	tunnelDialContext, err := outboundproxy.NewTunnelDialContext(configuredProxyURL)
+	if err != nil {
+		panic(err)
+	}
+
+	return &chromeTransport{
+		fallback:   fallbackTransport,
+		tunnelDial: tunnelDialContext,
+	}
 }
 
 type chromeTransport struct {
-	mu       sync.Mutex
-	h2Conns  map[string]*http2.ClientConn
+	mu         sync.Mutex
+	h2Conns    map[string]*http2.ClientConn
+	fallback   http.RoundTripper
+	tunnelDial func(context.Context, string, string) (net.Conn, error)
 }
 
 func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.URL.Scheme != "https" {
-		return http.DefaultTransport.RoundTrip(req)
+		return t.fallback.RoundTrip(req)
 	}
 
 	addr := req.URL.Host
@@ -70,8 +88,7 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func (t *chromeTransport) dialTLS(ctx context.Context, addr, host string) (net.Conn, error) {
-	dialer := net.Dialer{}
-	conn, err := dialer.DialContext(ctx, "tcp", addr)
+	conn, err := t.tunnelDial(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
@@ -87,4 +104,13 @@ func (t *chromeTransport) dialTLS(ctx context.Context, addr, host string) (net.C
 	}
 
 	return tlsConn, nil
+}
+
+func firstProxyURL(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }

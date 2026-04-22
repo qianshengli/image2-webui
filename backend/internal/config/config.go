@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"chatgpt2api/internal/outboundproxy"
+
 	"github.com/BurntSushi/toml"
 )
 
@@ -72,6 +74,13 @@ type LogConfig struct {
 	LogAllRequests bool `toml:"log_all_requests"`
 }
 
+type ProxyConfig struct {
+	Enabled     bool   `toml:"enabled"`
+	URL         string `toml:"url"`
+	Mode        string `toml:"mode"`
+	SyncEnabled bool   `toml:"sync_enabled"`
+}
+
 type Config struct {
 	mu     sync.RWMutex `toml:"-"`
 	loadMu sync.Mutex   `toml:"-"`
@@ -85,6 +94,7 @@ type Config struct {
 	Storage  StorageConfig  `toml:"storage"`
 	Sync     SyncConfig     `toml:"sync"`
 	Log      LogConfig      `toml:"log"`
+	Proxy    ProxyConfig    `toml:"proxy"`
 }
 
 func New(rootDir string) *Config {
@@ -107,6 +117,9 @@ func (c *Config) Load() error {
 		if err := decodeOverrideFile(c.paths.Override, next); err != nil {
 			return fmt.Errorf("decode override: %w", err)
 		}
+	}
+	if err := next.validate(); err != nil {
+		return err
 	}
 
 	c.mu.Lock()
@@ -247,6 +260,9 @@ func (c *Config) SaveOverride(section, key string, value any) error {
 			return fmt.Errorf("reload override: %w", err)
 		}
 	}
+	if err := next.validate(); err != nil {
+		return err
+	}
 
 	c.mu.Lock()
 	c.copyFrom(next)
@@ -296,7 +312,61 @@ func (c *Config) copyFrom(other *Config) {
 	c.Storage = other.Storage
 	c.Sync = other.Sync
 	c.Log = other.Log
+	c.Proxy = other.Proxy
 	c.paths = other.paths
+}
+
+func (c *Config) ChatGPTProxyURL() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.proxyURLLocked(false)
+}
+
+func (c *Config) SyncProxyURL() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.proxyURLLocked(true)
+}
+
+func (c *Config) proxyURLLocked(forSync bool) string {
+	if !c.Proxy.Enabled {
+		return ""
+	}
+	if forSync && !c.Proxy.SyncEnabled {
+		return ""
+	}
+	if normalizeProxyMode(c.Proxy.Mode) != "fixed" {
+		return ""
+	}
+	return strings.TrimSpace(c.Proxy.URL)
+}
+
+func (c *Config) validate() error {
+	if !c.Proxy.Enabled {
+		return nil
+	}
+
+	if normalizeProxyMode(c.Proxy.Mode) != "fixed" {
+		return fmt.Errorf("unsupported proxy.mode %q: only fixed is supported", strings.TrimSpace(c.Proxy.Mode))
+	}
+
+	if strings.TrimSpace(c.Proxy.URL) == "" {
+		return fmt.Errorf("proxy.url is required when proxy.enabled = true")
+	}
+
+	if err := outboundproxy.Validate(c.Proxy.URL); err != nil {
+		return fmt.Errorf("invalid proxy.url: %w", err)
+	}
+
+	return nil
+}
+
+func normalizeProxyMode(mode string) string {
+	normalized := strings.ToLower(strings.TrimSpace(mode))
+	if normalized == "" {
+		return "fixed"
+	}
+	return normalized
 }
 
 func decodeOverrideFile(path string, target *Config) error {
@@ -405,7 +475,7 @@ func resolvePaths(rootDir string) Paths {
 	root := normalizeRoot(rootDir)
 	return Paths{
 		Root:     root,
-		Defaults: filepath.Join(root, defaultConfigFile),
+		Defaults: filepath.Join(root, dataDirName, defaultConfigFile),
 		Override: filepath.Join(root, dataDirName, userConfigFile),
 	}
 }
@@ -415,9 +485,41 @@ func normalizeRoot(rootDir string) string {
 		return rootDir
 	}
 	if cwd, err := os.Getwd(); err == nil {
+		if detected := detectConfigRoot(cwd); detected != "" {
+			return detected
+		}
 		return cwd
 	}
 	return "."
+}
+
+func detectConfigRoot(startDir string) string {
+	dir := startDir
+	for {
+		// Prefer a local config root when running from backend itself.
+		if fileExists(filepath.Join(dir, dataDirName, defaultConfigFile)) {
+			return dir
+		}
+		// Backward compatibility: older layout placed defaults in backend/config.defaults.toml.
+		if fileExists(filepath.Join(dir, defaultConfigFile)) {
+			return dir
+		}
+		// Support running from repo root (or any subdir) by locating backend/data/config.defaults.toml.
+		backendDir := filepath.Join(dir, "backend")
+		if fileExists(filepath.Join(backendDir, dataDirName, defaultConfigFile)) {
+			return backendDir
+		}
+		// Backward compatibility: older layout placed defaults in backend/config.defaults.toml.
+		if fileExists(filepath.Join(backendDir, defaultConfigFile)) {
+			return backendDir
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
 }
 
 func fileExists(path string) bool {

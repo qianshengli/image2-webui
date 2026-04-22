@@ -40,7 +40,7 @@ ChatGpt Image Studio 是一个单仓库交付的图片工作流项目：
 │   ├── api/                  HTTP 路由与处理器
 │   ├── internal/             配置、账号、同步、中间件
 │   ├── data/                 运行时数据目录（默认不入库）
-│   ├── config.defaults.toml  默认配置
+│   ├── data/config.defaults.toml  默认配置（复制为 config.toml 后生效）
 │   └── main.go
 ├── web/                      Next.js 前端
 ├── scripts/                  build / dev / check 脚本
@@ -66,14 +66,14 @@ cd ChatGpt-Image-Studio
 
 ### 1. 准备本地配置
 
-先复制示例配置：
+先复制默认配置为本地配置：
 
 ```powershell
-Copy-Item backend/data/config.toml.example backend/data/config.toml
+Copy-Item backend/data/config.defaults.toml backend/data/config.toml
 ```
 
 ```bash
-cp backend/data/config.toml.example backend/data/config.toml
+cp backend/data/config.defaults.toml backend/data/config.toml
 ```
 
 最小本地配置：
@@ -92,6 +92,22 @@ base_url = "http://127.0.0.1:8317"
 management_key = "your-cliproxy-management-key"
 provider_type = "codex"
 ```
+
+如果需要通过固定代理访问 ChatGPT，可追加：
+
+```toml
+[proxy]
+enabled = true
+url = "socks5h://127.0.0.1:10808"
+mode = "fixed"
+sync_enabled = false
+```
+
+说明：
+
+- 当前仅支持固定代理模式 `fixed`
+- `url` 支持 `socks5`、`socks5h`、`http`、`https`
+- `sync_enabled = true` 时，CPA 同步请求也会复用同一代理
 
 ### 2. 启动开发环境
 

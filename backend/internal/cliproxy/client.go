@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"chatgpt2api/internal/outboundproxy"
 )
 
 type AuthFileInfo struct {
@@ -26,26 +28,32 @@ type AuthFileInfo struct {
 }
 
 type Client struct {
+	enabled       bool
 	baseURL       string
 	managementKey string
 	httpClient    *http.Client
 	providerType  string
 }
 
-func New(baseURL, managementKey, providerType string, timeout time.Duration) *Client {
+func New(enabled bool, baseURL, managementKey, providerType string, timeout time.Duration, proxyURL ...string) *Client {
 	if timeout <= 0 {
 		timeout = 20 * time.Second
 	}
+	transport, err := outboundproxy.NewHTTPTransport(firstProxyURL(proxyURL...))
+	if err != nil {
+		panic(err)
+	}
 	return &Client{
+		enabled:       enabled,
 		baseURL:       strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		managementKey: strings.TrimSpace(managementKey),
-		httpClient:    &http.Client{Timeout: timeout},
+		managementKey: normalizeManagementKey(managementKey),
+		httpClient:    &http.Client{Timeout: timeout, Transport: transport},
 		providerType:  strings.TrimSpace(providerType),
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.managementKey != ""
+	return c != nil && c.enabled && c.baseURL != "" && c.managementKey != ""
 }
 
 func (c *Client) ListAuthFiles(ctx context.Context) (map[string]AuthFileInfo, error) {
@@ -212,4 +220,24 @@ func (c *Client) matchesProvider(providerType, provider string) bool {
 		}
 	}
 	return false
+}
+
+func firstProxyURL(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func normalizeManagementKey(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	if strings.EqualFold(trimmed, "your-cliproxy-management-key") {
+		return ""
+	}
+	return trimmed
 }

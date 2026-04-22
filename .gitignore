@@ -4,6 +4,12 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Local agent/runtime artifacts
+.omx/
+.runtime/
+.codex-logs/
+.git.broken*/
+
 # Root artifacts
 *.log
 *.tmp
@@ -32,6 +38,9 @@ Thumbs.db
 !/backend/data/tmp/
 !/backend/data/tmp/image/
 !/backend/data/tmp/image/.gitkeep
+
+# Local backend config copy (not used by runtime)
+/backend/config.toml
 
 # Frontend dependencies/build
 /web/node_modules/
