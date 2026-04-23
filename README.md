@@ -5,28 +5,13 @@ ChatGpt Image Studio 是一个单服务交付的图片工作流项目：
 - `backend/`：Go 后端，负责图片接口、账号池、配置管理和静态资源托管
 - `web/`：Vite + React 前端，构建后输出到 `web/dist`
 - `scripts/`：本地开发、检查、构建脚本
-- `.github/workflows/`：CI 与 GitHub Release 发布流程
 
 项目当前交付方式是“一个二进制 + 一份静态前端 + 本地配置目录”：
 
 - 前端不需要单独部署
 - 后端运行时直接托管 `static/`
 - 首次启动时自动生成 `data/config.toml`
-- 发布包解压后即可本地运行
-
-> [!WARNING]
-> 免责声明：
->
-> 本项目涉及对 ChatGPT 官网相关图片能力的研究与封装，仅供个人学习、技术研究与非商业性技术交流使用。
->
-> - 严禁将本项目用于任何商业用途、盈利性使用、批量操作、自动化滥用或规模化调用。
-> - 严禁将本项目用于生成、传播或协助生成违法、暴力、色情、未成年人相关内容，或用于诈骗、欺诈、骚扰等非法或不当用途。
-> - 严禁将本项目用于任何违反 OpenAI 服务条款、当地法律法规或平台规则的行为。
-> - 使用者应自行承担全部风险，包括但不限于账号被限制、临时封禁、永久封禁以及因违规使用等导致的法律责任。
-> - 使用本项目即视为你已充分理解并同意本免责声明全部内容；如因滥用、违规或违法使用造成任何后果，均由使用者自行承担。
-
-> [!IMPORTANT]
-> 本项目基于对 ChatGPT 官网相关能力的研究实现，存在账号受限、临时封禁或永久封禁的风险。请勿使用自己的重要账号、常用账号或高价值账号进行测试。
+- 首次生成配置后即可本地运行
 
 ## 核心功能
 
@@ -54,9 +39,8 @@ ChatGpt Image Studio 是一个单服务交付的图片工作流项目：
 ├── web/                      Vite 前端
 │   ├── src/                  React 页面与组件
 │   └── dist/                 构建产物（不入库）
-├── packaging/                发布包附带文件
 ├── scripts/                  build / dev / check 脚本
-└── .github/workflows/        CI / Release
+└── README.md
 ```
 
 ## 环境要求
@@ -187,7 +171,7 @@ macOS / Linux：
 3. 构建后端二进制
 4. 生成本地发布目录 `dist/package`
 
-本地发布目录结构：
+构建输出目录结构：
 
 ```text
 dist/package/
@@ -221,35 +205,6 @@ macOS / Linux：
 - `npm run lint`
 - `npm run build`
 
-## 发布包
-
-GitHub Release 会自动生成多平台压缩包，命名格式：
-
-```text
-ChatGptImageStudio-v1.2.3-windows-amd64.zip
-ChatGptImageStudio-v1.2.3-windows-arm64.zip
-ChatGptImageStudio-v1.2.3-linux-amd64.zip
-ChatGptImageStudio-v1.2.3-linux-arm64.zip
-ChatGptImageStudio-v1.2.3-darwin-amd64.zip
-ChatGptImageStudio-v1.2.3-darwin-arm64.zip
-```
-
-压缩包内结构：
-
-```text
-chatgpt-image-studio.exe / chatgpt-image-studio
-data/
-  config.example.toml
-static/
-README.txt
-```
-
-首次启动后，程序会自动生成：
-
-```text
-data/config.toml
-```
-
 ## 启动失败兜底
 
 如果启动失败，程序会：
@@ -263,39 +218,6 @@ data/config.toml
 - 配置文件损坏
 - 静态资源缺失
 - 首次生成配置文件失败
-
-## 版本规则
-
-- Git tag 统一使用：`vMAJOR.MINOR.PATCH`
-- 默认只递增小版本中的 `PATCH`
-- 当 `PATCH` 满 `24` 后，进入下一个 `MINOR`，并从 `.1` 重新开始
-- `MAJOR` 版本只在人工指定时提升
-
-后端版本信息会注入二进制，并通过 `/version` 返回：
-
-```json
-{
-  "version": "v1.2.3",
-  "commit": "abc1234",
-  "buildTime": "2026-04-23T12:00:00Z"
-}
-```
-
-前端构建版本通过 `VITE_APP_VERSION` 注入。
-
-## GitHub Actions
-
-- CI：`.github/workflows/ci.yml`
-- Release：`.github/workflows/release.yml`
-
-Release 工作流会自动：
-
-1. 构建前端 `web/dist`
-2. 构建多平台 Go 二进制
-3. 组装标准发布目录
-4. 打包成 zip
-5. 生成 `checksums.txt`
-6. 上传到 GitHub Release
 
 ## 主要接口
 
@@ -353,6 +275,24 @@ Release 工作流会自动：
 
 不要提交认证文件、管理密钥、运行状态或日志中的敏感内容。
 
+## 社区支持
+
+- Linux.do 社区：<https://linux.do/>
+
 ## 许可证
 
 本仓库使用 MIT 许可证，详见 [LICENSE](LICENSE)。
+
+> [!WARNING]
+> 免责声明：
+>
+> 本项目涉及对 ChatGPT 官网相关图片能力的研究与封装，仅供个人学习、技术研究与非商业性技术交流使用。
+>
+> - 严禁将本项目用于任何商业用途、盈利性使用、批量操作、自动化滥用或规模化调用。
+> - 严禁将本项目用于生成、传播或协助生成违法、暴力、色情、未成年人相关内容，或用于诈骗、欺诈、骚扰等非法或不当用途。
+> - 严禁将本项目用于任何违反 OpenAI 服务条款、当地法律法规或平台规则的行为。
+> - 使用者应自行承担全部风险，包括但不限于账号被限制、临时封禁、永久封禁以及因违规使用等导致的法律责任。
+> - 使用本项目即视为你已充分理解并同意本免责声明全部内容；如因滥用、违规或违法使用造成任何后果，均由使用者自行承担。
+
+> [!IMPORTANT]
+> 本项目基于对 ChatGPT 官网相关能力的研究实现，存在账号受限、临时封禁或永久封禁的风险。请勿使用自己的重要账号、常用账号或高价值账号进行测试。
