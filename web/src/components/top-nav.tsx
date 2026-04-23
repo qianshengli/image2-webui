@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Activity, ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield, Sparkles } from "lucide-react";
 
-import webConfig from "@/constants/common-env";
+import { fetchVersionInfo } from "@/lib/api";
 import { clearStoredAuthKey } from "@/store/auth";
 import { cn } from "@/lib/utils";
+
+const repositoryUrl = "https://github.com/peiyizhi0724/ChatGpt-Image-Studio";
+
+function formatVersionLabel(value: string) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/^v+/i, "");
+  return normalized ? `v${normalized}` : "读取中";
+}
 
 const navItems = [
   { href: "/image", label: "图片工作台", description: "生成、编辑与放大", icon: ImageIcon },
@@ -18,10 +27,11 @@ const navItems = [
 type DesktopTopNavProps = {
   pathname: string;
   defaultCollapsed: boolean;
+  versionLabel: string;
   onLogout: () => Promise<void>;
 };
 
-function DesktopTopNav({ pathname, defaultCollapsed, onLogout }: DesktopTopNavProps) {
+function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, onLogout }: DesktopTopNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   return (
@@ -97,10 +107,19 @@ function DesktopTopNav({ pathname, defaultCollapsed, onLogout }: DesktopTopNavPr
         </nav>
 
         <div className="mt-auto space-y-3">
-          <div className={cn("rounded-2xl bg-white/70 text-xs text-stone-500 shadow-sm", collapsed ? "px-2 py-3 text-center" : "px-4 py-3")}>
+          <a
+            href={repositoryUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              "block rounded-2xl bg-white/70 text-xs text-stone-500 shadow-sm transition hover:bg-white hover:text-stone-700",
+              collapsed ? "px-2 py-3 text-center" : "px-4 py-3",
+            )}
+            title="打开 GitHub 仓库"
+          >
             {!collapsed ? <div className="font-medium text-stone-700">版本</div> : null}
-            <div className={cn(!collapsed ? "mt-1" : "font-medium")}>v{webConfig.appVersion}</div>
-          </div>
+            <div className={cn(!collapsed ? "mt-1" : "font-medium")}>{versionLabel}</div>
+          </a>
           <button
             type="button"
             className={cn(
@@ -123,6 +142,29 @@ export function TopNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isImageRoute = pathname === "/image" || pathname?.startsWith("/image/");
+  const [versionLabel, setVersionLabel] = useState("读取中");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadVersion = async () => {
+      try {
+        const payload = await fetchVersionInfo();
+        if (!cancelled) {
+          setVersionLabel(formatVersionLabel(payload.version));
+        }
+      } catch {
+        if (!cancelled) {
+          setVersionLabel("未知版本");
+        }
+      }
+    };
+
+    void loadVersion();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogout = async () => {
     await clearStoredAuthKey();
@@ -196,6 +238,7 @@ export function TopNav() {
         key={isImageRoute ? "image-route" : "non-image-route"}
         pathname={pathname}
         defaultCollapsed={isImageRoute}
+        versionLabel={versionLabel}
         onLogout={handleLogout}
       />
     </>

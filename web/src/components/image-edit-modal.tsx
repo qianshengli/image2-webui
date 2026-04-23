@@ -24,6 +24,11 @@ type MaskPayload = {
   previewDataUrl: string;
 };
 
+type BrushCursor = {
+  x: number;
+  y: number;
+};
+
 type ImageEditModalProps = {
   open: boolean;
   imageName: string;
@@ -96,6 +101,7 @@ export function ImageEditModal({
 }: ImageEditModalProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewFrameRef = useRef<HTMLDivElement>(null);
   const pointerActiveRef = useRef(false);
 
   const [prompt, setPrompt] = useState("");
@@ -103,9 +109,11 @@ export function ImageEditModal({
   const [brushSize, setBrushSize] = useState(42);
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
+  const [previewFrameSize, setPreviewFrameSize] = useState({ width: 0, height: 0 });
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [redoStrokes, setRedoStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
+  const [brushCursor, setBrushCursor] = useState<BrushCursor | null>(null);
 
   const hasSelection = strokes.length > 0;
   const helperText = useMemo(
@@ -127,6 +135,21 @@ export function ImageEditModal({
       document.body.style.overflow = previousOverflow;
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    pointerActiveRef.current = false;
+    setPrompt("");
+    setSelectionMode(false);
+    setBrushSize(42);
+    setStrokes([]);
+    setRedoStrokes([]);
+    setCurrentStroke(null);
+    setBrushCursor(null);
+  }, [open, imageSrc]);
 
   useEffect(() => {
     if (!open || !imageRef.current) {
@@ -162,6 +185,32 @@ export function ImageEditModal({
   }, [open, imageSrc]);
 
   useEffect(() => {
+    if (!open || !previewFrameRef.current) {
+      return;
+    }
+
+    const updatePreviewFrameSize = () => {
+      const element = previewFrameRef.current;
+      if (!element) {
+        return;
+      }
+      setPreviewFrameSize({
+        width: Math.max(0, Math.round(element.clientWidth)),
+        height: Math.max(0, Math.round(element.clientHeight)),
+      });
+    };
+
+    updatePreviewFrameSize();
+    const observer = new ResizeObserver(() => updatePreviewFrameSize());
+    observer.observe(previewFrameRef.current);
+    window.addEventListener("resize", updatePreviewFrameSize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updatePreviewFrameSize);
+    };
+  }, [open, imageSrc]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || displaySize.width <= 0 || displaySize.height <= 0) {
       return;
@@ -183,6 +232,12 @@ export function ImageEditModal({
     }
   }, [displaySize, strokes, currentStroke]);
 
+  useEffect(() => {
+    if (!selectionMode) {
+      setBrushCursor(null);
+    }
+  }, [selectionMode]);
+
   const mapClientPoint = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -196,7 +251,22 @@ export function ImageEditModal({
       x: clampPoint((clientX - rect.left) / rect.width),
       y: clampPoint((clientY - rect.top) / rect.height),
       sizeRatio: brushSize / Math.min(rect.width, rect.height),
+      offsetX: clientX - rect.left,
+      offsetY: clientY - rect.top,
     };
+  };
+
+  const updateBrushCursor = (clientX: number, clientY: number) => {
+    const point = mapClientPoint(clientX, clientY);
+    if (!point) {
+      setBrushCursor(null);
+      return null;
+    }
+    setBrushCursor({
+      x: point.offsetX,
+      y: point.offsetY,
+    });
+    return point;
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -204,7 +274,7 @@ export function ImageEditModal({
       return;
     }
     event.preventDefault();
-    const point = mapClientPoint(event.clientX, event.clientY);
+    const point = updateBrushCursor(event.clientX, event.clientY);
     if (!point) {
       return;
     }
@@ -218,11 +288,14 @@ export function ImageEditModal({
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!pointerActiveRef.current || !selectionMode || isSubmitting) {
+    if (!selectionMode || isSubmitting) {
       return;
     }
     event.preventDefault();
-    const point = mapClientPoint(event.clientX, event.clientY);
+    const point = updateBrushCursor(event.clientX, event.clientY);
+    if (!pointerActiveRef.current) {
+      return;
+    }
     if (!point) {
       return;
     }
@@ -236,8 +309,11 @@ export function ImageEditModal({
     );
   };
 
-  const finishStroke = () => {
+  const finishStroke = (options?: { hideCursor?: boolean }) => {
     pointerActiveRef.current = false;
+    if (options?.hideCursor) {
+      setBrushCursor(null);
+    }
     setCurrentStroke((prev) => {
       if (!prev || prev.points.length === 0) {
         return null;
@@ -419,7 +495,7 @@ export function ImageEditModal({
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden px-6 py-6">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
           <div className="w-full max-w-[1200px] rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <span>{helperText}</span>
@@ -439,14 +515,27 @@ export function ImageEditModal({
             </div>
           </div>
 
-          <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-auto">
-            <div className="relative inline-flex max-h-full max-w-full items-center justify-center">
+          <div
+            ref={previewFrameRef}
+            className="flex min-h-0 w-full flex-1 items-center justify-center overflow-auto rounded-[28px] border border-stone-200 bg-[#f8f7f4] p-4 sm:p-6"
+          >
+            <div
+              className="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl"
+              style={{
+                maxWidth: previewFrameSize.width > 0 ? previewFrameSize.width : undefined,
+                maxHeight: previewFrameSize.height > 0 ? previewFrameSize.height : undefined,
+              }}
+            >
               {/* 原生 img 便于直接读取天然尺寸并与遮罩 canvas 做 1:1 叠加。 */}
               <img
                 ref={imageRef}
                 src={imageSrc}
                 alt={imageName}
-                className="max-h-[calc(100vh-300px)] max-w-full rounded-2xl border border-stone-200 bg-white object-contain shadow-[0_24px_70px_rgba(28,25,23,0.10)]"
+                className="block h-auto max-h-full w-auto max-w-full rounded-2xl border border-stone-200 bg-white object-contain shadow-[0_24px_70px_rgba(28,25,23,0.10)]"
+                style={{
+                  maxWidth: previewFrameSize.width > 0 ? previewFrameSize.width : undefined,
+                  maxHeight: previewFrameSize.height > 0 ? previewFrameSize.height : undefined,
+                }}
                 onLoad={(event) => {
                   const target = event.currentTarget;
                   setNaturalSize({
@@ -465,7 +554,7 @@ export function ImageEditModal({
                   ref={canvasRef}
                   className={cn(
                     "absolute rounded-2xl touch-none",
-                    selectionMode ? "cursor-crosshair pointer-events-auto" : "pointer-events-none",
+                    selectionMode ? "pointer-events-auto cursor-none" : "pointer-events-none",
                   )}
                   style={{
                     width: displaySize.width,
@@ -474,9 +563,26 @@ export function ImageEditModal({
                   }}
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
-                  onPointerUp={finishStroke}
-                  onPointerLeave={finishStroke}
-                  onPointerCancel={finishStroke}
+                  onPointerEnter={(event) => {
+                    if (!selectionMode || isSubmitting) {
+                      return;
+                    }
+                    void updateBrushCursor(event.clientX, event.clientY);
+                  }}
+                  onPointerUp={() => finishStroke()}
+                  onPointerLeave={() => finishStroke({ hideCursor: true })}
+                  onPointerCancel={() => finishStroke({ hideCursor: true })}
+                />
+              ) : null}
+              {selectionMode && brushCursor && displaySize.width > 0 && displaySize.height > 0 ? (
+                <div
+                  className="pointer-events-none absolute rounded-full border border-stone-900/45 bg-stone-950/10 shadow-[0_0_0_1px_rgba(255,255,255,0.8)]"
+                  style={{
+                    width: brushSize,
+                    height: brushSize,
+                    left: brushCursor.x - brushSize / 2,
+                    top: brushCursor.y - brushSize / 2,
+                  }}
                 />
               ) : null}
             </div>

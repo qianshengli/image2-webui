@@ -118,11 +118,15 @@
   }
 
   html {
-    @apply h-full;
+    @apply h-full overflow-hidden;
   }
 
   body {
-    @apply h-full bg-background text-foreground;
+    @apply h-full overflow-hidden bg-background text-foreground;
+  }
+
+  #root {
+    @apply h-full overflow-hidden;
   }
 
   ::selection {

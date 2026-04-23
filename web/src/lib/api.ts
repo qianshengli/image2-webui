@@ -224,6 +224,12 @@ export type RequestLogItem = {
   error?: string;
 };
 
+export type VersionInfo = {
+  version: string;
+  commit?: string;
+  buildTime?: string;
+};
+
 export async function login(authKey: string) {
   const normalizedAuthKey = String(authKey || "").trim();
   return httpRequest<{ ok: boolean }>("/auth/login", {
@@ -315,6 +321,12 @@ export async function updateConfig(config: ConfigPayload) {
 
 export async function fetchRequestLogs() {
   return httpRequest<{ items: RequestLogItem[] }>("/api/requests");
+}
+
+export async function fetchVersionInfo() {
+  return httpRequest<VersionInfo>("/version", {
+    redirectOnUnauthorized: false,
+  });
 }
 
 export async function runSync(direction: "pull" | "push") {

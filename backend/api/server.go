@@ -37,6 +37,8 @@ type requestError struct {
 	message string
 }
 
+const cpaFixedImageModel = "gpt-image-2"
+
 func (e *requestError) Error() string {
 	return firstNonEmpty(e.message, e.code)
 }
@@ -93,13 +95,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":      true,
-		"version": firstNonEmpty(buildinfo.Version, s.cfg.App.Version),
+		"version": buildinfo.ResolveVersion(s.cfg.App.Version),
 	})
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
-		"version":   firstNonEmpty(buildinfo.Version, s.cfg.App.Version),
+		"version":   buildinfo.ResolveVersion(s.cfg.App.Version),
 		"commit":    buildinfo.Commit,
 		"buildTime": buildinfo.BuildTime,
 	})
@@ -520,6 +522,9 @@ func (s *Server) handleImageUpscale(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) withImageResults(ctx context.Context, operation, responseFormat, preferredAccountID, requestedModel string, responsesEligible bool, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, error) {
 	mode := s.configuredImageMode()
+	if mode == "cpa" {
+		return s.runPureCPAImageRequest(ctx, operation, responseFormat, requestedModel, strings.TrimSpace(preferredAccountID) != "", run, r)
+	}
 	if strings.TrimSpace(preferredAccountID) != "" {
 		authFile, account, err := s.store.FindImageAuthByID(preferredAccountID)
 		if err != nil {
@@ -534,14 +539,8 @@ func (s *Server) withImageResults(ctx context.Context, operation, responseFormat
 
 	attempted := map[string]struct{}{}
 	var lastRetryableErr error
-	var allowAccount func(accounts.PublicAccount) bool
-	if mode == "cpa" {
-		allowAccount = func(account accounts.PublicAccount) bool {
-			return isPaidImageAccountType(account.Type)
-		}
-	}
 	for {
-		authFile, account, err := s.store.AcquireImageAuthFiltered(attempted, allowAccount)
+		authFile, account, err := s.store.AcquireImageAuthFiltered(attempted, nil)
 		if err != nil {
 			return nil, resolveImageAcquireError(mode, err, lastRetryableErr)
 		}
@@ -564,9 +563,78 @@ func resolveImageAcquireError(mode string, err, lastRetryableErr error) error {
 		return lastRetryableErr
 	}
 	if mode == "cpa" {
-		return newRequestError("no_cpa_image_accounts", "当前没有可用的 Plus / Pro / Team 图片账号用于 CPA 模式")
+		return newRequestError("no_cpa_image_accounts", "当前没有可用的图片账号用于 CPA 模式")
 	}
 	return err
+}
+
+func (s *Server) runPureCPAImageRequest(
+	ctx context.Context,
+	operation string,
+	responseFormat string,
+	requestedModel string,
+	preferredAccount bool,
+	run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error),
+	r *http.Request,
+) ([]map[string]any, error) {
+	startedAt := time.Now()
+	if !s.cfg.CPAImageConfigured() {
+		err := newRequestError("cpa_image_not_configured", "CPA 图片接口还未配置，请先在配置管理中设置 CPA base_url 与 api_key")
+		s.logImageRequest(imageRequestLogEntry{
+			StartedAt:      startedAt.Format(time.RFC3339Nano),
+			FinishedAt:     time.Now().Format(time.RFC3339Nano),
+			Endpoint:       r.URL.Path,
+			Operation:      operation,
+			ImageMode:      "cpa",
+			Direction:      "cpa",
+			Route:          "cpa",
+			RequestedModel: requestedModel,
+			Preferred:      preferredAccount,
+			Success:        false,
+			Error:          err.Error(),
+		})
+		return nil, err
+	}
+
+	client := newCPAImageClient(
+		s.cfg.CPAImageBaseURL(),
+		s.cfg.CPAImageAPIKey(),
+		time.Duration(max(10, s.cfg.CPAImageRequestTimeout()))*time.Second,
+	)
+	upstreamModel := cpaFixedImageModel
+	results, err := run(client, upstreamModel)
+	if err != nil {
+		s.logImageRequest(imageRequestLogEntry{
+			StartedAt:      startedAt.Format(time.RFC3339Nano),
+			FinishedAt:     time.Now().Format(time.RFC3339Nano),
+			Endpoint:       r.URL.Path,
+			Operation:      operation,
+			ImageMode:      "cpa",
+			Direction:      "cpa",
+			Route:          "cpa",
+			RequestedModel: requestedModel,
+			UpstreamModel:  upstreamModel,
+			Preferred:      preferredAccount,
+			Success:        false,
+			Error:          err.Error(),
+		})
+		return nil, err
+	}
+
+	s.logImageRequest(imageRequestLogEntry{
+		StartedAt:      startedAt.Format(time.RFC3339Nano),
+		FinishedAt:     time.Now().Format(time.RFC3339Nano),
+		Endpoint:       r.URL.Path,
+		Operation:      operation,
+		ImageMode:      "cpa",
+		Direction:      "cpa",
+		Route:          "cpa",
+		RequestedModel: requestedModel,
+		UpstreamModel:  upstreamModel,
+		Preferred:      preferredAccount,
+		Success:        true,
+	})
+	return buildImageResponse(r, client, results, responseFormat, ""), nil
 }
 
 func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAuth, account accounts.PublicAccount, operation, responseFormat string, preferredAccount bool, requestedModel string, responsesEligible bool, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, bool, error) {
@@ -622,29 +690,6 @@ func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAu
 		direction     string
 	)
 	if shouldUseCPAImageRoute(mode, account.Type) {
-		if account.Type == "Free" {
-			err := newRequestError("cpa_free_image_unsupported", "CPA 模式下 Free 账号无图片权限")
-			s.logImageRequest(imageRequestLogEntry{
-				StartedAt:      startedAt.Format(time.RFC3339Nano),
-				FinishedAt:     time.Now().Format(time.RFC3339Nano),
-				Endpoint:       r.URL.Path,
-				Operation:      operation,
-				ImageMode:      mode,
-				Direction:      "cpa",
-				Route:          "cpa",
-				AccountType:    account.Type,
-				AccountEmail:   account.Email,
-				AccountFile:    authFile.Name,
-				RequestedModel: requestedModel,
-				Preferred:      preferredAccount,
-				Success:        false,
-				Error:          err.Error(),
-			})
-			if preferredAccount {
-				return nil, false, err
-			}
-			return nil, true, err
-		}
 		if !s.cfg.CPAImageConfigured() {
 			err := newRequestError("cpa_image_not_configured", "CPA 图片接口还未配置，请先在配置管理中设置 CPA base_url 与 api_key")
 			s.logImageRequest(imageRequestLogEntry{
@@ -673,7 +718,7 @@ func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAu
 			s.cfg.CPAImageAPIKey(),
 			time.Duration(max(10, s.cfg.CPAImageRequestTimeout()))*time.Second,
 		)
-		upstreamModel = normalizeRequestedImageModel(requestedModel, s.cfg.ChatGPT.Model)
+		upstreamModel = cpaFixedImageModel
 		route = "cpa"
 		direction = "cpa"
 	} else {

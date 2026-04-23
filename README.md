@@ -26,6 +26,14 @@ ChatGpt Image Studio 是一个单服务交付的图片工作流项目：
 - 请求方向记录页，可区分官方与 CPA 链路
 - 配置管理页，可直接修改 `data/config.toml`
 
+## 界面预览
+
+| 预览 1 | 预览 2 |
+| --- | --- |
+| ![界面预览 1](asset/21994c2f6f7ccdc2f5c6f5c472c1e7a7af4f1063.png) | ![界面预览 2](asset/665a23c2fc38a6c49d127f454b651854fcfa8e84.png) |
+| ![界面预览 3](asset/9c47ac91270469513b769c30748f6d48f421ba9f.png) | ![界面预览 4](asset/a4f2e51c873e3066fb71fcab84fee8dee8ff9ea9.png) |
+| ![界面预览 5](asset/bb2f570badfb194f8b16b07221df40bfac94ee05.png) | ![界面预览 6](asset/bf84c0b8a48d8cc28afec8a1980834887f8dd211.png) |
+
 ## 仓库结构
 
 ```text

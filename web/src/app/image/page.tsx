@@ -463,6 +463,7 @@ function shouldFallbackSelectionEdit(error: unknown) {
 export default function ImagePage() {
   const didLoadQuotaRef = useRef(false);
   const mountedRef = useRef(true);
+  const draftSelectionRef = useRef(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const maskInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -513,6 +514,16 @@ export default function ImagePage() {
   );
   const waitingDots = useMemo(() => buildWaitingDots(submitElapsedSeconds), [submitElapsedSeconds]);
 
+  const focusConversation = (conversationId: string) => {
+    draftSelectionRef.current = false;
+    setSelectedConversationId(conversationId);
+  };
+
+  const openDraftConversation = () => {
+    draftSelectionRef.current = true;
+    setSelectedConversationId(null);
+  };
+
   const syncRuntimeTaskState = (preferredConversationId?: string | null) => {
     const tasks = listActiveImageTasks();
     const nextTask =
@@ -549,6 +560,19 @@ export default function ImagePage() {
         return;
       }
       setConversations(nextItems);
+      setSelectedConversationId((current) => {
+        if (current && nextItems.some((item) => item.id === current)) {
+          return current;
+        }
+        if (draftSelectionRef.current) {
+          return null;
+        }
+        const activeTaskConversationId = listActiveImageTasks()[0]?.conversationId;
+        if (activeTaskConversationId && nextItems.some((item) => item.id === activeTaskConversationId)) {
+          return activeTaskConversationId;
+        }
+        return nextItems[0]?.id ?? null;
+      });
     } catch (error) {
       if (!silent) {
         const message = error instanceof Error ? error.message : "读取会话记录失败";
@@ -711,13 +735,13 @@ export default function ImagePage() {
     setImageModel(example.model);
     setImageCount(String(example.count));
     setImagePrompt(example.prompt);
-    setSelectedConversationId(null);
+    openDraftConversation();
     setSourceImages([]);
     textareaRef.current?.focus();
   };
 
   const handleCreateDraft = () => {
-    setSelectedConversationId(null);
+    openDraftConversation();
     resetComposer("generate");
     textareaRef.current?.focus();
   };
@@ -725,7 +749,13 @@ export default function ImagePage() {
   const handleDeleteConversation = async (id: string) => {
     const nextConversations = conversations.filter((item) => item.id !== id);
     setConversations(nextConversations);
-    setSelectedConversationId((prev) => (prev === id ? null : prev));
+    setSelectedConversationId((prev) => {
+      if (prev !== id) {
+        return prev;
+      }
+      draftSelectionRef.current = false;
+      return nextConversations[0]?.id ?? null;
+    });
 
     try {
       await deleteImageConversation(id);
@@ -740,6 +770,7 @@ export default function ImagePage() {
   const handleClearHistory = async () => {
     try {
       await clearImageConversations();
+      draftSelectionRef.current = true;
       setConversations([]);
       setSelectedConversationId(null);
       toast.success("已清空历史记录");
@@ -813,7 +844,7 @@ export default function ImagePage() {
       toast.error("当前图片没有可复用的数据");
       return;
     }
-    setSelectedConversationId(conversationId);
+    focusConversation(conversationId);
     setMode(nextMode);
     setSourceImages([
       {
@@ -899,7 +930,7 @@ export default function ImagePage() {
     });
     setSubmitElapsedSeconds(0);
     setSubmitStartedAt(startedAt);
-    setSelectedConversationId(conversationId);
+    focusConversation(conversationId);
     setImagePrompt("");
     setSourceImages([]);
     setEditorTarget(null);
@@ -1091,7 +1122,7 @@ export default function ImagePage() {
     });
     setSubmitElapsedSeconds(0);
     setSubmitStartedAt(startedAt);
-    setSelectedConversationId(conversationId);
+    focusConversation(conversationId);
     startImageTask({
       conversationId,
       turnId,
@@ -1274,7 +1305,7 @@ export default function ImagePage() {
     });
     setSubmitElapsedSeconds(0);
     setSubmitStartedAt(startedAt);
-    setSelectedConversationId(conversationId);
+    focusConversation(conversationId);
     setImagePrompt("");
     setSourceImages([]);
     startImageTask({
@@ -1501,7 +1532,7 @@ export default function ImagePage() {
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            onClick={() => setSelectedConversationId(conversation.id)}
+                            onClick={() => focusConversation(conversation.id)}
                             className="flex min-w-0 flex-1 items-center gap-3 text-left"
                           >
                             <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-stone-100">

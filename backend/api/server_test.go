@@ -107,10 +107,10 @@ func TestResolveImageAcquireError(t *testing.T) {
 		wantCode         string
 	}{
 		{
-			name:        "cpa mode maps empty paid pool to business error",
+			name:        "cpa mode still maps empty pool when helper is used",
 			mode:        "cpa",
 			err:         accounts.ErrNoAvailableImageAuth,
-			wantMessage: "当前没有可用的 Plus / Pro / Team 图片账号用于 CPA 模式",
+			wantMessage: "当前没有可用的图片账号用于 CPA 模式",
 			wantCode:    "no_cpa_image_accounts",
 		},
 		{

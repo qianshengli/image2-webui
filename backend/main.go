@@ -45,7 +45,7 @@ func main() {
 			fmt.Sprintf("参考示例配置：%s", paths.Defaults),
 		)
 	}
-	cfg.App.Version = firstNonEmpty(buildinfo.Version, cfg.App.Version)
+	cfg.App.Version = buildinfo.ResolveVersion(cfg.App.Version)
 
 	if err := ensureStaticAssets(cfg.ResolvePath(cfg.Server.StaticDir)); err != nil {
 		fatalStartup(logger, paths, "静态资源缺失", err,

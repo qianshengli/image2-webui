@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
+import { Link } from "react-router-dom";
 import {
   Ban,
   CheckCircle2,
@@ -59,6 +60,7 @@ import {
   type SyncStatus,
   type SyncStatusResponse,
 } from "@/lib/api";
+import { getCachedSyncStatus, setCachedSyncStatus } from "@/store/sync-status-cache";
 import { cn } from "@/lib/utils";
 
 const accountTypeOptions: { label: string; value: AccountType | "all" }[] = [
@@ -111,9 +113,6 @@ const metricCards = [
   { key: "disabled", label: "禁用账户", color: "text-stone-500", icon: Ban },
   { key: "quota", label: "剩余额度", color: "text-blue-500", icon: RefreshCw },
 ] as const;
-
-let cachedSyncStatus: SyncStatusResponse | null = null;
-let hasLoadedSyncStatus = false;
 
 function formatCompact(value: number) {
   if (value >= 1000) {
@@ -286,23 +285,39 @@ export default function AccountsPage() {
     }
   };
 
-  const loadSync = async (silent = false) => {
-    if (!silent && hasLoadedSyncStatus && cachedSyncStatus) {
-      setSyncStatus(cachedSyncStatus);
+  const loadSync = async ({
+    silent = false,
+    force = false,
+    revalidate = false,
+    suppressError = false,
+  }: {
+    silent?: boolean;
+    force?: boolean;
+    revalidate?: boolean;
+    suppressError?: boolean;
+  } = {}) => {
+    const cachedStatus = getCachedSyncStatus();
+    if (!silent && !force && cachedStatus) {
+      setSyncStatus(cachedStatus);
       setIsSyncLoading(false);
+      if (revalidate) {
+        void loadSync({ silent: true, force: true, suppressError: true });
+      }
       return;
     }
+
     if (!silent) {
       setIsSyncLoading(true);
     }
     try {
       const data = await fetchSyncStatus();
-      cachedSyncStatus = data;
-      hasLoadedSyncStatus = true;
+      setCachedSyncStatus(data);
       setSyncStatus(data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "读取同步状态失败";
-      toast.error(message);
+      if (!suppressError) {
+        const message = error instanceof Error ? error.message : "读取同步状态失败";
+        toast.error(message);
+      }
     } finally {
       if (!silent) {
         setIsSyncLoading(false);
@@ -315,7 +330,8 @@ export default function AccountsPage() {
       return;
     }
     didLoadRef.current = true;
-    void Promise.all([loadAccounts(), loadSync()]);
+    void Promise.all([loadAccounts(), loadSync({ revalidate: true })]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredAccounts = useMemo(() => {
@@ -394,7 +410,7 @@ export default function AccountsPage() {
       setAccounts(normalizeAccounts(data.items));
       setSelectedIds((prev) => prev.filter((id) => data.items.some((item) => item.id === id)));
       setPage(1);
-      await loadSync(true);
+      await loadSync({ silent: true, force: true });
 
       const failedMessage = data.failed?.[0]?.error;
       if ((data.failed?.length ?? 0) > 0) {
@@ -423,7 +439,7 @@ export default function AccountsPage() {
       const data = await deleteAccounts(tokens);
       setAccounts(normalizeAccounts(data.items));
       setSelectedIds((prev) => prev.filter((id) => data.items.some((item) => item.id === id)));
-      await loadSync(true);
+      await loadSync({ silent: true, force: true });
       toast.success(`删除 ${data.removed ?? 0} 个账户`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "删除账户失败";
@@ -490,11 +506,10 @@ export default function AccountsPage() {
     try {
       const data = await runSync(direction);
       if (data.status) {
-        cachedSyncStatus = data.status;
-        hasLoadedSyncStatus = true;
+        setCachedSyncStatus(data.status);
         setSyncStatus(data.status);
       } else {
-        await loadSync(true);
+        await loadSync({ silent: true, force: true });
       }
       const result = data.result;
       if (!result.ok && result.error) {
@@ -535,8 +550,8 @@ export default function AccountsPage() {
         quota: Number(editQuota || 0),
       });
       setAccounts(normalizeAccounts(data.items));
-      setSelectedIds((prev) => prev.filter((id) => data.items.some((item) => item.id === id)));
-      setEditingAccount(null);
+    setSelectedIds((prev) => prev.filter((id) => data.items.some((item) => item.id === id)));
+    setEditingAccount(null);
       toast.success("账号信息已更新");
     } catch (error) {
       const message = error instanceof Error ? error.message : "更新账号失败";
@@ -555,7 +570,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="hide-scrollbar min-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-5 sm:py-6 lg:h-full lg:min-h-0 lg:px-6 lg:py-7">
+    <div className="hide-scrollbar h-full min-h-0 overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-5 sm:py-6 lg:px-6 lg:py-7">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="inline-flex size-12 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
@@ -563,24 +578,6 @@ export default function AccountsPage() {
           </div>
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight text-stone-950">号池管理</h1>
-          </div>
-        </div>
-        <div className="relative self-start text-amber-950">
-          <div
-            tabIndex={0}
-            className="group inline-flex cursor-default items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium outline-none transition-colors hover:border-amber-300 hover:bg-amber-100 focus-visible:border-amber-300 focus-visible:bg-amber-100"
-          >
-            <CircleAlert className="size-4 shrink-0" />
-            <span>导入与使用可能风险提示</span>
-            <div className="pointer-events-none absolute top-full right-0 z-30 mt-3 w-80 max-w-[calc(100vw-2rem)] translate-y-1 rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm leading-6 text-stone-700 opacity-0 shadow-[0_18px_50px_-24px_rgba(120,53,15,0.45)] transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:pointer-events-auto group-focus-visible:translate-y-0 group-focus-visible:opacity-100 sm:w-96">
-              <div className="absolute top-0 right-6 size-3 -translate-y-1/2 rotate-45 border-t border-l border-amber-200 bg-white" />
-              <div>
-                账号导入、轮换与调用仅限合法合规用途，严禁用于违法违规、批量滥用、套利倒卖或其他违反平台规则的行为。
-              </div>
-              <div className="mt-2">
-                请尽量使用不常用的小号进行测试，不要导入自己的重要账号、常用账号或高价值账号；使用本项目存在账号受限、临时封禁或永久封禁的风险，相关后果需自行承担。
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -684,7 +681,7 @@ export default function AccountsPage() {
                 <Button
                   variant="outline"
                   className="h-10 rounded-xl border-stone-200 bg-white px-4 text-stone-700"
-                  onClick={() => void loadSync()}
+                  onClick={() => void loadSync({ force: true })}
                   disabled={isSyncLoading || syncRunningDirection !== null}
                 >
                   <RefreshCw className={cn("size-4", isSyncLoading ? "animate-spin" : "")} />
@@ -715,8 +712,12 @@ export default function AccountsPage() {
               </div>
             ) : !syncView.configured ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-700">
-                后端还没有配置 CPA 同步。请在 `data/config.toml` 中设置 `sync.enabled = true`、`sync.base_url`
-                和 `sync.management_key`。
+                后端还没有配置 CPA 同步。请前往
+                <Link to="/settings" className="mx-1 font-medium underline decoration-amber-400 underline-offset-4">
+                  配置管理
+                </Link>
+                开启 <code>sync.enabled = true</code>，并填写 <code>sync.base_url</code> 与{" "}
+                <code>sync.management_key</code>。
               </div>
             ) : (
               <>
