@@ -29,10 +29,13 @@ Thumbs.db
 
 # Backend local data
 /backend/data/config.toml
+/backend/data/config.example.toml
 /backend/data/accounts_state.json
 /backend/data/auths/*.json
 /backend/data/sync_state/*.json
 /backend/data/tmp/
+/backend/data/last-startup-error.txt
+/backend/static/
 !/backend/data/auths/.gitkeep
 !/backend/data/sync_state/.gitkeep
 !/backend/data/tmp/
@@ -45,12 +48,15 @@ Thumbs.db
 # Frontend dependencies/build
 /web/node_modules/
 /web/.next/
+/web/dist/
 /web/out/
 /web/coverage/
 /web/build/
 /web/.env*
 /web/*.tsbuildinfo
 /web/next-env.d.ts
+/web/vite-watch.out.log
+/web/vite-watch.err.log
 
 # Package manager noise
 /web/npm-debug.log*

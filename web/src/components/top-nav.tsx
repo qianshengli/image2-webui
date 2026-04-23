@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Activity, ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield, Sparkles } from "lucide-react";
 
 import webConfig from "@/constants/common-env";
@@ -30,7 +29,7 @@ function DesktopTopNav({ pathname, defaultCollapsed, onLogout }: DesktopTopNavPr
       <div className="flex h-full w-full flex-col rounded-[28px] border border-stone-200 bg-[#f0f0ed] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
         <div className={cn("gap-2", collapsed ? "flex flex-col items-center" : "flex items-center justify-between")}>
           <Link
-            href="/image"
+            to="/image"
             className={cn(
               "flex items-center rounded-2xl transition hover:bg-white/70",
               collapsed ? "justify-center px-0 py-1" : "min-w-0 flex-1 gap-3 px-3 py-3",
@@ -69,7 +68,7 @@ function DesktopTopNav({ pathname, defaultCollapsed, onLogout }: DesktopTopNavPr
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 className={cn(
                   "flex rounded-2xl transition",
                   collapsed ? "justify-center px-0 py-3.5" : "items-center gap-3 px-3 py-3",
@@ -121,13 +120,13 @@ function DesktopTopNav({ pathname, defaultCollapsed, onLogout }: DesktopTopNavPr
 }
 
 export function TopNav() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const isImageRoute = pathname === "/image" || pathname?.startsWith("/image/");
 
   const handleLogout = async () => {
     await clearStoredAuthKey();
-    router.replace("/login");
+    navigate("/login", { replace: true });
   };
 
   if (pathname === "/login" || pathname === "/login.html" || pathname.startsWith("/login/")) {
@@ -140,7 +139,7 @@ export function TopNav() {
         <div className="rounded-[26px] border border-stone-200 bg-[#f0f0ed] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
           <div className="flex items-center justify-between gap-3">
             <Link
-              href="/image"
+              to="/image"
               className="flex min-w-0 items-center gap-3 rounded-2xl px-1 py-1 transition hover:bg-white/70"
             >
               <span className="flex size-10 items-center justify-center rounded-2xl bg-white text-stone-900 shadow-sm">
@@ -169,7 +168,7 @@ export function TopNav() {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  to={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-2xl px-3 py-3 transition",
                     active ? "bg-white text-stone-950 shadow-sm" : "bg-white/60 text-stone-600 hover:bg-white hover:text-stone-900",

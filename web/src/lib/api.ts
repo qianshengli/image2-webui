@@ -302,6 +302,10 @@ export async function fetchConfig() {
   return httpRequest<ConfigPayload>("/api/config");
 }
 
+export async function fetchDefaultConfig() {
+  return httpRequest<ConfigPayload>("/api/config/defaults");
+}
+
 export async function updateConfig(config: ConfigPayload) {
   return httpRequest<{ status: string; config: ConfigPayload }>("/api/config", {
     method: "PUT",

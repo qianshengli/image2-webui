@@ -1,6 +1,9 @@
 package accounts
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -230,4 +233,102 @@ func TestBuildPublicAccountFallsBackProImageQuotaWhenLimitMissing(t *testing.T) 
 	if !hasImageGen {
 		t.Fatal("expected limits_progress to include image_gen")
 	}
+}
+
+func TestAcquireImageAuthFilteredReturnsSentinelWhenNoEligibleAccount(t *testing.T) {
+	rootDir := t.TempDir()
+	authDir := filepath.Join(rootDir, "auths")
+	syncDir := filepath.Join(rootDir, "sync")
+	if err := os.MkdirAll(authDir, 0o755); err != nil {
+		t.Fatalf("mkdir auth dir: %v", err)
+	}
+	if err := os.MkdirAll(syncDir, 0o755); err != nil {
+		t.Fatalf("mkdir sync dir: %v", err)
+	}
+
+	store := &Store{
+		authDir:      authDir,
+		syncStateDir: syncDir,
+		stateFile:    filepath.Join(rootDir, "state.json"),
+		defaultQuota: 5,
+		providerType: "codex",
+		states: map[string]RuntimeState{
+			"free.json": {
+				Type:       "Free",
+				Status:     "正常",
+				Quota:      1,
+				QuotaKnown: true,
+			},
+		},
+	}
+
+	if err := writeJSONFile(filepath.Join(authDir, "free.json"), map[string]any{
+		"type":         "codex",
+		"access_token": "token-free",
+		"email":        "free@example.com",
+	}); err != nil {
+		t.Fatalf("seed free auth file: %v", err)
+	}
+
+	_, _, err := store.AcquireImageAuthFiltered(nil, func(account PublicAccount) bool {
+		return account.Type != "Free"
+	})
+	if !errors.Is(err, ErrNoAvailableImageAuth) {
+		t.Fatalf("AcquireImageAuthFiltered() error = %v, want ErrNoAvailableImageAuth", err)
+	}
+}
+
+func TestAcquireImageAuthFilteredAcceptsPaidAccountInferredFromAccessToken(t *testing.T) {
+	rootDir := t.TempDir()
+	authDir := filepath.Join(rootDir, "auths")
+	syncDir := filepath.Join(rootDir, "sync")
+	if err := os.MkdirAll(authDir, 0o755); err != nil {
+		t.Fatalf("mkdir auth dir: %v", err)
+	}
+	if err := os.MkdirAll(syncDir, 0o755); err != nil {
+		t.Fatalf("mkdir sync dir: %v", err)
+	}
+
+	store := &Store{
+		authDir:      authDir,
+		syncStateDir: syncDir,
+		stateFile:    filepath.Join(rootDir, "state.json"),
+		defaultQuota: 5,
+		providerType: "codex",
+		states:       map[string]RuntimeState{},
+	}
+
+	token := mustTestJWT(t, map[string]any{
+		"https://api.openai.com/auth": map[string]any{
+			"chatgpt_plan_type": "plus",
+		},
+	})
+
+	if err := writeJSONFile(filepath.Join(authDir, "paid.json"), map[string]any{
+		"type":         "codex",
+		"access_token": token,
+		"email":        "paid@example.com",
+	}); err != nil {
+		t.Fatalf("seed paid auth file: %v", err)
+	}
+
+	_, account, err := store.AcquireImageAuthFiltered(nil, func(account PublicAccount) bool {
+		return account.Type == "Plus" || account.Type == "Pro" || account.Type == "Team"
+	})
+	if err != nil {
+		t.Fatalf("AcquireImageAuthFiltered() returned error: %v", err)
+	}
+	if account.Type != "Plus" {
+		t.Fatalf("AcquireImageAuthFiltered() type = %q, want %q", account.Type, "Plus")
+	}
+}
+
+func mustTestJWT(t *testing.T, payload map[string]any) string {
+	t.Helper()
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	return "header." + base64.RawURLEncoding.EncodeToString(raw) + ".signature"
 }

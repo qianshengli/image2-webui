@@ -165,6 +165,7 @@ type Store struct {
 }
 
 var ErrSourceAccountNotFound = errors.New("source account not found")
+var ErrNoAvailableImageAuth = errors.New("no available image auth")
 
 type stateEnvelope struct {
 	Accounts map[string]RuntimeState `json:"accounts"`
@@ -648,6 +649,14 @@ func (s *Store) FindImageAuthByID(accountID string) (*LocalAuth, PublicAccount, 
 }
 
 func (s *Store) AcquireImageAuth(excluded map[string]struct{}) (*LocalAuth, PublicAccount, error) {
+	return s.acquireImageAuth(excluded, nil)
+}
+
+func (s *Store) AcquireImageAuthFiltered(excluded map[string]struct{}, allow func(PublicAccount) bool) (*LocalAuth, PublicAccount, error) {
+	return s.acquireImageAuth(excluded, allow)
+}
+
+func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(PublicAccount) bool) (*LocalAuth, PublicAccount, error) {
 	localAuths, err := s.loadAuths()
 	if err != nil {
 		return nil, PublicAccount{}, err
@@ -668,6 +677,9 @@ func (s *Store) AcquireImageAuth(excluded map[string]struct{}) (*LocalAuth, Publ
 		if _, blocked := excluded[auth.AccessToken]; blocked {
 			continue
 		}
+		if allow != nil && !allow(account) {
+			continue
+		}
 		ready := isUsableImageAccount(account)
 		refreshNeeded := NeedsImageQuotaRefresh(account, now)
 		if auth.AccessToken == "" ||
@@ -685,7 +697,7 @@ func (s *Store) AcquireImageAuth(excluded map[string]struct{}) (*LocalAuth, Publ
 	}
 
 	if len(accounts) == 0 {
-		return nil, PublicAccount{}, fmt.Errorf("no available tokens found in %s", s.authDir)
+		return nil, PublicAccount{}, fmt.Errorf("%w in %s", ErrNoAvailableImageAuth, s.authDir)
 	}
 
 	sort.Slice(accounts, func(i, j int) bool {
@@ -1540,6 +1552,13 @@ func guessPlanFromPayload(data map[string]any) string {
 	}
 	if plan := normalizePlanType(stringValue(data["account_type"])); plan != "" {
 		return plan
+	}
+	if token := strings.TrimSpace(stringValue(data["access_token"])); token != "" {
+		if tokenPayload := decodeAccessTokenPayload(token); len(tokenPayload) > 0 {
+			if plan := guessPlanFromPayload(tokenPayload); plan != "" {
+				return plan
+			}
+		}
 	}
 	return ""
 }

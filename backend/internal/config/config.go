@@ -14,9 +14,14 @@ import (
 )
 
 const (
-	defaultConfigFile = "config.defaults.toml"
+	exampleConfigFile = "config.example.toml"
 	userConfigFile    = "config.toml"
 	dataDirName       = "data"
+)
+
+var (
+	osGetwd      = os.Getwd
+	osExecutable = os.Executable
 )
 
 type Paths struct {
@@ -119,11 +124,8 @@ func (c *Config) Load() error {
 
 	next := &Config{paths: c.paths}
 
-	if !fileExists(c.paths.Defaults) {
-		return fmt.Errorf("default config file not found: %s", c.paths.Defaults)
-	}
-	if _, err := toml.DecodeFile(c.paths.Defaults, next); err != nil {
-		return fmt.Errorf("decode defaults: %w", err)
+	if err := decodeDefaultTemplate(next); err != nil {
+		return fmt.Errorf("decode embedded defaults: %w", err)
 	}
 	if fileExists(c.paths.Override) {
 		if err := decodeOverrideFile(c.paths.Override, next); err != nil {
@@ -276,8 +278,8 @@ func (c *Config) SaveOverrides(values map[string]map[string]any) error {
 	}
 
 	next := &Config{paths: c.paths}
-	if _, err := toml.DecodeFile(c.paths.Defaults, next); err != nil {
-		return fmt.Errorf("reload defaults: %w", err)
+	if err := decodeDefaultTemplate(next); err != nil {
+		return fmt.Errorf("reload embedded defaults: %w", err)
 	}
 	if fileExists(c.paths.Override) {
 		if err := decodeOverrideFile(c.paths.Override, next); err != nil {
@@ -293,6 +295,18 @@ func (c *Config) SaveOverrides(values map[string]map[string]any) error {
 	c.loaded = true
 	c.mu.Unlock()
 	return nil
+}
+
+func LoadDefaults(paths Paths) (*Config, error) {
+	next := &Config{paths: paths}
+	if err := decodeDefaultTemplate(next); err != nil {
+		return nil, fmt.Errorf("decode embedded defaults: %w", err)
+	}
+	if err := next.validate(); err != nil {
+		return nil, err
+	}
+	next.loaded = true
+	return next, nil
 }
 
 func (c *Config) lookup(key string) (any, bool) {
@@ -478,6 +492,11 @@ func decodeOverrideFile(path string, target *Config) error {
 	return applyOverrideMap(reflect.ValueOf(target).Elem(), raw)
 }
 
+func decodeDefaultTemplate(target *Config) error {
+	_, err := toml.Decode(defaultConfigTemplate, target)
+	return err
+}
+
 func applyOverrideMap(dst reflect.Value, raw map[string]any) error {
 	for key, value := range raw {
 		field, ok := structFieldByTOMLTag(dst, key)
@@ -576,7 +595,7 @@ func resolvePaths(rootDir string) Paths {
 	root := normalizeRoot(rootDir)
 	return Paths{
 		Root:     root,
-		Defaults: filepath.Join(root, dataDirName, defaultConfigFile),
+		Defaults: filepath.Join(root, dataDirName, exampleConfigFile),
 		Override: filepath.Join(root, dataDirName, userConfigFile),
 	}
 }
@@ -585,10 +604,23 @@ func normalizeRoot(rootDir string) string {
 	if rootDir != "" {
 		return rootDir
 	}
-	if cwd, err := os.Getwd(); err == nil {
+	if exePath, err := osExecutable(); err == nil {
+		exeDir := filepath.Dir(exePath)
+		if detected := detectConfigRoot(exeDir); detected != "" {
+			return detected
+		}
+	}
+	if cwd, err := osGetwd(); err == nil {
 		if detected := detectConfigRoot(cwd); detected != "" {
 			return detected
 		}
+	}
+	if exePath, err := osExecutable(); err == nil {
+		if exeDir := filepath.Dir(exePath); exeDir != "" {
+			return exeDir
+		}
+	}
+	if cwd, err := osGetwd(); err == nil {
 		return cwd
 	}
 	return "."
@@ -597,21 +629,21 @@ func normalizeRoot(rootDir string) string {
 func detectConfigRoot(startDir string) string {
 	dir := startDir
 	for {
-		// Prefer a local config root when running from backend itself.
-		if fileExists(filepath.Join(dir, dataDirName, defaultConfigFile)) {
+		// Prefer a local config root when running from backend itself or from a release package.
+		if hasConfigMarker(dir) {
 			return dir
 		}
 		// Backward compatibility: older layout placed defaults in backend/config.defaults.toml.
-		if fileExists(filepath.Join(dir, defaultConfigFile)) {
+		if fileExists(filepath.Join(dir, "config.defaults.toml")) {
 			return dir
 		}
-		// Support running from repo root (or any subdir) by locating backend/data/config.defaults.toml.
+		// Support running from repo root (or any subdir) by locating backend/data config files.
 		backendDir := filepath.Join(dir, "backend")
-		if fileExists(filepath.Join(backendDir, dataDirName, defaultConfigFile)) {
+		if hasConfigMarker(backendDir) {
 			return backendDir
 		}
 		// Backward compatibility: older layout placed defaults in backend/config.defaults.toml.
-		if fileExists(filepath.Join(backendDir, defaultConfigFile)) {
+		if fileExists(filepath.Join(backendDir, "config.defaults.toml")) {
 			return backendDir
 		}
 
@@ -621,6 +653,16 @@ func detectConfigRoot(startDir string) string {
 		}
 		dir = parent
 	}
+}
+
+func hasConfigMarker(root string) bool {
+	if strings.TrimSpace(root) == "" {
+		return false
+	}
+	dataDir := filepath.Join(root, dataDirName)
+	return fileExists(filepath.Join(dataDir, userConfigFile)) ||
+		fileExists(filepath.Join(dataDir, exampleConfigFile)) ||
+		fileExists(filepath.Join(dataDir, "config.defaults.toml"))
 }
 
 func fileExists(path string) bool {

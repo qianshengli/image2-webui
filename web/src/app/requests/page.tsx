@@ -49,17 +49,21 @@ export default function RequestsPage() {
         <div className="rounded-[30px] border border-stone-200 bg-white px-5 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <div className="inline-flex size-12 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
-                <Activity className="size-5" />
+              <div className="flex items-start gap-4">
+                <div className="inline-flex size-12 shrink-0 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
+                  <Activity className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-semibold tracking-tight text-stone-950">调用请求</h1>
+                  <p className="mt-2 max-w-[840px] text-sm leading-7 text-stone-500">
+                    这里记录最近的图片请求实际走向，便于判断当前请求到底是
+                    <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">官方直连</span>
+                    还是
+                    <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">CPA</span>
+                    。
+                  </p>
+                </div>
               </div>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-stone-950">调用请求</h1>
-              <p className="mt-2 max-w-[840px] text-sm leading-7 text-stone-500">
-                这里记录最近的图片请求实际走向，便于判断当前请求到底是
-                <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">官方直连</span>
-                还是
-                <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">CPA</span>
-                。
-              </p>
             </div>
             <Button
               type="button"

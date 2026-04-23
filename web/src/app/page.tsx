@@ -1,14 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Navigate } from "react-router-dom";
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/image");
-  }, [router]);
-
-  return null;
+  return <Navigate to="/image" replace />;
 }

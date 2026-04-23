@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent } from "react";
 import Zoom from "react-medium-image-zoom";
 import "react-medium-image-zoom/dist/styles.css";
@@ -23,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AppImage as Image } from "@/components/app-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -1577,7 +1577,6 @@ export default function ImagePage() {
 
             <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
               <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5">模型 {imageModel}</span>
-              <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5">剩余额度 {availableQuota}</span>
             </div>
           </div>
         </div>

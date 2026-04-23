@@ -49,16 +49,22 @@ type ResponsesClient struct {
 }
 
 func NewResponsesClientWithProxy(accessToken, proxyURL string, authData map[string]any) *ResponsesClient {
-	backend := NewChatGPTClientWithProxy(
+	return NewResponsesClientWithProxyAndConfig(accessToken, proxyURL, authData, ImageRequestConfig{})
+}
+
+func NewResponsesClientWithProxyAndConfig(accessToken, proxyURL string, authData map[string]any, requestConfig ImageRequestConfig) *ResponsesClient {
+	requestConfig = normalizeImageRequestConfig(requestConfig)
+	backend := NewChatGPTClientWithProxyAndConfig(
 		accessToken,
 		firstString(authData, "cookies", "cookie"),
 		proxyURL,
+		requestConfig,
 	)
 	return &ResponsesClient{
 		backend:   backend,
 		accountID: resolveChatGPTAccountID(accessToken, authData),
 		httpClient: &http.Client{
-			Timeout:   sseTimeout + 30*time.Second,
+			Timeout:   requestConfig.SSETimeout + 30*time.Second,
 			Transport: newChromeTransport(proxyURL),
 		},
 	}

@@ -19,7 +19,7 @@ function Ensure-FrontendDependencies {
   $requiredBins = @(
     "node_modules/.bin/tsc",
     "node_modules/.bin/eslint",
-    "node_modules/.bin/next"
+    "node_modules/.bin/vite"
   )
 
   $missing = @($requiredBins | Where-Object { -not (Test-Path $_) })
@@ -29,7 +29,7 @@ function Ensure-FrontendDependencies {
   }
 }
 
-Write-Host "[1/4] Running backend tests..."
+Write-Host "[1/5] Running backend tests..."
 Push-Location $backendDir
 go test ./...
 Assert-LastExitCode "go test ./..."

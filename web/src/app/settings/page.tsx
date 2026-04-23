@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LoaderCircle, RefreshCw, Save, Settings2 } from "lucide-react";
+import { LoaderCircle, RefreshCcw, RefreshCw, Save, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fetchConfig, updateConfig, type ConfigPayload, type ImageMode } from "@/lib/api";
+import { fetchConfig, fetchDefaultConfig, updateConfig, type ConfigPayload, type ImageMode } from "@/lib/api";
 
 const imageModeOptions: Array<{ label: string; value: ImageMode; hint: string }> = [
   { label: "Studio", value: "studio", hint: "Free 走当前项目官方链路，Plus/Pro/Team 走官方 responses" },
@@ -94,6 +94,29 @@ function ToggleField({
   );
 }
 
+function joinDisplayPath(root: string, relativePath: string) {
+  const normalizedRoot = String(root || "").trim().replace(/[\\/]+$/, "");
+  const normalizedRelative = String(relativePath || "").trim().replace(/^[\\/]+/, "");
+  if (!normalizedRoot) {
+    return normalizedRelative;
+  }
+  if (!normalizedRelative) {
+    return normalizedRoot;
+  }
+  const separator = normalizedRoot.includes("\\") ? "\\" : "/";
+  return `${normalizedRoot}${separator}${normalizedRelative.replace(/[\\/]+/g, separator)}`;
+}
+
+function firstNonEmptyValue(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    const trimmed = String(value || "").trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+  return "";
+}
+
 function defaultConfigPayload(): ConfigPayload {
   return {
     app: {
@@ -119,7 +142,7 @@ function defaultConfigPayload(): ConfigPayload {
       freeImageRoute: "legacy",
       freeImageModel: "auto",
       paidImageRoute: "responses",
-      paidImageModel: "gpt-5-3",
+      paidImageModel: "gpt-5.4-mini",
     },
     accounts: {
       defaultQuota: 5,
@@ -142,7 +165,7 @@ function defaultConfigPayload(): ConfigPayload {
     },
     proxy: {
       enabled: false,
-      url: "",
+      url: "socks5h://127.0.0.1:10808",
       mode: "fixed",
       syncEnabled: false,
     },
@@ -164,6 +187,7 @@ function defaultConfigPayload(): ConfigPayload {
 
 export default function SettingsPage() {
   const [config, setConfig] = useState<ConfigPayload>(defaultConfigPayload);
+  const [defaultConfig, setDefaultConfig] = useState<ConfigPayload>(defaultConfigPayload);
   const [savedConfig, setSavedConfig] = useState<ConfigPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -175,12 +199,37 @@ export default function SettingsPage() {
     return JSON.stringify(config) !== JSON.stringify(savedConfig);
   }, [config, savedConfig]);
 
+  const resolvedStaticDir = useMemo(() => {
+    const staticDir = String(config.server.staticDir || "").trim();
+    if (!staticDir) {
+      return "";
+    }
+    if (/^[A-Za-z]:[\\/]/.test(staticDir) || staticDir.startsWith("/") || staticDir.startsWith("\\\\")) {
+      return staticDir;
+    }
+    return joinDisplayPath(config.paths.root, staticDir);
+  }, [config.paths.root, config.server.staticDir]);
+
+  const startupErrorPath = useMemo(
+    () => joinDisplayPath(config.paths.root, "data/last-startup-error.txt"),
+    [config.paths.root],
+  );
+  const effectiveCPAImageBaseUrl = useMemo(
+    () => firstNonEmptyValue(config.cpa.baseUrl, config.sync.baseUrl),
+    [config.cpa.baseUrl, config.sync.baseUrl],
+  );
+  const syncManagementKeyStatus = useMemo(
+    () => (String(config.sync.managementKey || "").trim() ? "已配置" : "未配置"),
+    [config.sync.managementKey],
+  );
+
   const loadConfig = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchConfig();
-      setConfig(data);
-      setSavedConfig(data);
+      const [currentConfig, defaults] = await Promise.all([fetchConfig(), fetchDefaultConfig()]);
+      setConfig(currentConfig);
+      setSavedConfig(currentConfig);
+      setDefaultConfig(defaults);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "读取配置失败");
     } finally {
@@ -216,76 +265,97 @@ export default function SettingsPage() {
     }
   };
 
+  const restoreDefaults = () => {
+    setConfig(defaultConfig);
+    toast.success("已恢复为默认配置草稿，点击“保存配置”后才会真正生效");
+  };
+
   return (
     <section className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-1 py-1">
-        <div className="rounded-[30px] border border-stone-200 bg-white px-5 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <div className="inline-flex size-12 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
+      <div className="mx-auto flex max-w-[1440px] flex-col gap-6 px-1 py-1">
+      <div className="rounded-[30px] border border-stone-200 bg-white px-5 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-start gap-4">
+              <div className="inline-flex size-12 shrink-0 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
                 <Settings2 className="size-5" />
               </div>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-stone-950">配置管理</h1>
-              <p className="mt-2 max-w-[820px] text-sm leading-7 text-stone-500">
-                所有字段都先在页面本地编辑，只有点击“保存配置”后才会写入
-                <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">backend/data/config.toml</span>
-                并立即在后端生效。
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none"
-                onClick={() => void loadConfig()}
-                disabled={isLoading || isSaving}
-              >
-                {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-                重新读取
-              </Button>
-              <Button
-                type="button"
-                className="h-10 rounded-full bg-stone-950 px-4 text-white hover:bg-stone-800"
-                onClick={() => void saveConfig()}
-                disabled={!isDirty || isLoading || isSaving}
-              >
-                {isSaving ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
-                保存配置
-              </Button>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight text-stone-950">配置管理</h1>
+                <p className="mt-2 max-w-[820px] text-sm leading-7 text-stone-500">
+                  所有字段都先在页面本地编辑，只有点击“保存配置”后才会写入
+                  <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">data/config.toml</span>
+                  并立即在后端生效。发布版默认以
+                  <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">可执行文件所在目录</span>
+                  作为配置根目录。
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-
-        <ConfigSection title="图片模式" description="控制图片请求到底走当前项目官方链路，还是走 CPA 的 OpenAI 图片接口。">
-          <Field label="图片模式" hint={imageModeOptions.find((item) => item.value === config.chatgpt.imageMode)?.hint || ""}>
-            <Select
-              value={config.chatgpt.imageMode}
-              onValueChange={(value) =>
-                setSection("chatgpt", {
-                  ...config.chatgpt,
-                  imageMode: value as ImageMode,
-                })
-              }
+          <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none"
+              onClick={() => void loadConfig()}
+              disabled={isLoading || isSaving}
             >
-              <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none focus-visible:ring-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {imageModeOptions.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="默认图片模型" hint="当前项目图片请求默认使用的模型名。">
-            <Input
-              value={config.chatgpt.model}
-              onChange={(event) => setSection("chatgpt", { ...config.chatgpt, model: event.target.value })}
-              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
-            />
-          </Field>
+              {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              重新读取
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none"
+              onClick={restoreDefaults}
+              disabled={isLoading || isSaving}
+            >
+              <RefreshCcw className="size-4" />
+              恢复默认
+            </Button>
+            <Button
+              type="button"
+              className="h-10 rounded-full bg-stone-950 px-3 text-[13px] text-white hover:bg-stone-800"
+              onClick={() => void saveConfig()}
+              disabled={!isDirty || isLoading || isSaving}
+            >
+              {isSaving ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
+              保存配置
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <ConfigSection title="图片模式" description="控制图片请求到底走当前项目官方链路，还是走 CPA 的 OpenAI 图片接口。">
+        <Field label="图片模式" hint={imageModeOptions.find((item) => item.value === config.chatgpt.imageMode)?.hint || ""}>
+          <Select
+            value={config.chatgpt.imageMode}
+            onValueChange={(value) =>
+              setSection("chatgpt", {
+                ...config.chatgpt,
+                imageMode: value as ImageMode,
+              })
+            }
+          >
+            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none focus-visible:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {imageModeOptions.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="默认图片模型" hint="当前项目图片请求默认使用的模型名。">
+          <Input
+            value={config.chatgpt.model}
+            onChange={(event) => setSection("chatgpt", { ...config.chatgpt, model: event.target.value })}
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          />
+        </Field>
           <Field label="Free 官方路由" hint="Studio 模式下 Free 账号走 legacy 还是 responses。">
             <Select
               value={config.chatgpt.freeImageRoute}
@@ -327,7 +397,7 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Paid 官方模型" hint="Studio 模式下 Paid 账号真正发给官方的模型，例如 gpt-5-3 或 gpt-5.4。">
+          <Field label="Paid 官方模型" hint="Studio 模式下 Paid 账号真正发给官方的模型，例如 gpt-5.4-mini 或 gpt-5.4。">
             <Input
               value={config.chatgpt.paidImageModel}
               onChange={(event) => setSection("chatgpt", { ...config.chatgpt, paidImageModel: event.target.value })}
@@ -336,15 +406,41 @@ export default function SettingsPage() {
           </Field>
         </ConfigSection>
 
-        <ConfigSection title="CPA 图片接口" description="当图片模式为 CPA 或 MIX 时，图片请求会使用这里配置的 CPA base_url 与 api_key。">
-          <Field label="CPA Base URL" hint="例如 http://127.0.0.1:8317。留空时会回退复用同步配置里的 base_url。">
+        <ConfigSection
+          title="CPA 配置"
+          description="图片请求读取 [cpa].base_url / [cpa].api_key；CPA 管理同步读取 [sync].base_url / [sync].management_key。若 [cpa].base_url 留空，会自动回退使用 [sync].base_url。"
+        >
+          <Field
+            label="当前生效 CPA 图片地址"
+            hint="运行时优先读取 [cpa].base_url；为空时回退 [sync].base_url。这里只是回显当前生效值，不会改写配置文件。"
+            fullWidth
+          >
+            <Input
+              value={effectiveCPAImageBaseUrl || "未配置"}
+              readOnly
+              className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none"
+            />
+          </Field>
+          <Field
+            label="CPA 管理 Key 状态"
+            hint="对应 [sync].management_key，仅用于账号同步管理接口，不参与图片生成请求。"
+            fullWidth
+          >
+            <Input
+              value={syncManagementKeyStatus}
+              readOnly
+              className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none"
+            />
+          </Field>
+          <Field label="CPA 图片 Base URL" hint="对应 [cpa].base_url，例如 http://127.0.0.1:8317。留空时会回退复用 [sync].base_url。">
             <Input
               value={config.cpa.baseUrl}
               onChange={(event) => setSection("cpa", { ...config.cpa, baseUrl: event.target.value })}
+              placeholder={config.sync.baseUrl || "http://127.0.0.1:8317"}
               className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
             />
           </Field>
-          <Field label="CPA API Key" hint="用于调用 CPA OpenAI 图片接口的 Bearer key。">
+          <Field label="CPA 图片 API Key" hint="对应 [cpa].api_key，用于调用 CPA OpenAI 图片接口的 Bearer key。">
             <Input
               type="password"
               value={config.cpa.apiKey}
@@ -352,7 +448,7 @@ export default function SettingsPage() {
               className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
             />
           </Field>
-          <Field label="CPA 请求超时（秒）" hint="当前项目调用 CPA 图片接口时使用的 HTTP 超时。">
+          <Field label="CPA 图片请求超时（秒）" hint="对应 [cpa].request_timeout，当前项目调用 CPA 图片接口时使用的 HTTP 超时。">
             <Input
               type="number"
               value={String(config.cpa.requestTimeout)}
@@ -365,14 +461,14 @@ export default function SettingsPage() {
               className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
             />
           </Field>
-          <Field label="同步 Base URL" hint="CPA 管理接口地址，用于账号同步，与上面的 CPA 图片接口地址可相同也可不同。">
+          <Field label="CPA 管理 Base URL" hint="对应 [sync].base_url，用于账号同步管理接口，与上面的 CPA 图片地址可相同也可不同。">
             <Input
               value={config.sync.baseUrl}
               onChange={(event) => setSection("sync", { ...config.sync, baseUrl: event.target.value })}
               className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
             />
           </Field>
-          <Field label="同步 Management Key" hint="只用于 CPA 管理接口同步，不用于图片生成。">
+          <Field label="CPA 管理 Key" hint="对应 [sync].management_key，只用于 CPA 管理接口同步，不用于图片生成。">
             <Input
               type="password"
               value={config.sync.managementKey}
@@ -388,7 +484,30 @@ export default function SettingsPage() {
           />
         </ConfigSection>
 
-        <ConfigSection title="基础运行配置" description="后端服务、上传大小、超时和账号刷新等常用配置。">
+        <ConfigSection title="基础运行配置" description="后端服务监听地址、端口、上传大小、超时和账号刷新等常用配置。修改监听地址或端口后，需要重启程序才会生效。">
+          <Field label="当前版本" hint="只读：当前后端返回的版本号。发布版会由构建流程注入。" fullWidth>
+            <Input value={config.app.version} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+          </Field>
+          <Field label="监听地址" hint="默认 0.0.0.0。只想本机访问时可改成 127.0.0.1。">
+            <Input
+              value={config.server.host}
+              onChange={(event) => setSection("server", { ...config.server, host: event.target.value })}
+              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            />
+          </Field>
+          <Field label="监听端口" hint="程序启动失败提示端口占用时，通常先改这里。保存后会写入 data/config.toml，但要重启程序才会真正切到新端口。">
+            <Input
+              type="number"
+              value={String(config.server.port)}
+              onChange={(event) =>
+                setSection("server", {
+                  ...config.server,
+                  port: Number(event.target.value || 0),
+                })
+              }
+              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            />
+          </Field>
           <Field label="UI 登录密钥" hint="账号管理、配置管理、调用请求页面使用的 Bearer 密钥。">
             <Input
               type="password"
@@ -516,14 +635,24 @@ export default function SettingsPage() {
           />
         </ConfigSection>
 
-        <ConfigSection title="代理与路径" description="路径通常不建议频繁修改；代理适用于访问官方链路与 CPA 同步。">
+      <ConfigSection title="服务与路径" description="发布版默认从可执行文件同级的 data/ 和 static/ 读写配置与静态资源，路径通常不建议频繁修改。">
+          <Field label="静态资源目录" hint="发布包默认是 static。开发脚本会把 web/dist 同步到 backend/static。">
+            <Input
+              value={config.server.staticDir}
+              onChange={(event) => setSection("server", { ...config.server, staticDir: event.target.value })}
+              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            />
+          </Field>
+          <Field label="解析后的静态目录" hint="只读：当前后端实际读取静态页面的路径。">
+            <Input value={resolvedStaticDir} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+          </Field>
           <ToggleField
             label="启用固定代理"
             hint="用于访问官方图片链路。当前只支持 fixed 模式。"
             checked={config.proxy.enabled}
             onCheckedChange={(checked) => setSection("proxy", { ...config.proxy, enabled: checked })}
           />
-          <Field label="代理 URL" hint="支持 socks5 / socks5h / http / https。">
+          <Field label="代理 URL" hint="支持 socks5 / socks5h / http / https。默认示例是 socks5h://127.0.0.1:10808。">
             <Input
               value={config.proxy.url}
               onChange={(event) => setSection("proxy", { ...config.proxy, url: event.target.value })}
@@ -574,11 +703,14 @@ export default function SettingsPage() {
           <Field label="配置根目录" hint="只读：当前后端自动识别到的配置根目录。" fullWidth>
             <Input value={config.paths.root} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
           </Field>
-          <Field label="默认配置文件" hint="只读：默认配置路径。" fullWidth>
+          <Field label="示例配置文件" hint="只读：程序启动时自动写出的示例配置路径。" fullWidth>
             <Input value={config.paths.defaults} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
           </Field>
           <Field label="覆盖配置文件" hint="只读：点击保存后实际写入的配置文件。" fullWidth>
             <Input value={config.paths.override} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+          </Field>
+          <Field label="启动错误日志" hint="只读：程序启动失败时会将中文错误详情写到这里。" fullWidth>
+            <Input value={startupErrorPath} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
           </Field>
         </ConfigSection>
       </div>

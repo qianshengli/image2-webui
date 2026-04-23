@@ -67,12 +67,50 @@ func TestDetectConfigRootFindsBackendFromRepoRoot(t *testing.T) {
 	if err := os.MkdirAll(backendDataDir, 0o755); err != nil {
 		t.Fatalf("mkdir backend data: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(backendDataDir, defaultConfigFile), []byte(""), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(backendDataDir, exampleConfigFile), []byte(""), 0o644); err != nil {
 		t.Fatalf("write defaults: %v", err)
 	}
 
 	got := detectConfigRoot(rootDir)
 	if got != backendDir {
 		t.Fatalf("expected detected root %q, got %q", backendDir, got)
+	}
+}
+
+func TestNormalizeRootPrefersExecutableConfigRoot(t *testing.T) {
+	releaseDir := t.TempDir()
+	releaseDataDir := filepath.Join(releaseDir, "data")
+	if err := os.MkdirAll(releaseDataDir, 0o755); err != nil {
+		t.Fatalf("mkdir release data: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(releaseDataDir, exampleConfigFile), []byte(""), 0o644); err != nil {
+		t.Fatalf("write release example config: %v", err)
+	}
+
+	workingDir := t.TempDir()
+	workingDataDir := filepath.Join(workingDir, "data")
+	if err := os.MkdirAll(workingDataDir, 0o755); err != nil {
+		t.Fatalf("mkdir working data: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(workingDataDir, exampleConfigFile), []byte(""), 0o644); err != nil {
+		t.Fatalf("write working example config: %v", err)
+	}
+
+	originalGetwd := osGetwd
+	originalExecutable := osExecutable
+	t.Cleanup(func() {
+		osGetwd = originalGetwd
+		osExecutable = originalExecutable
+	})
+
+	osGetwd = func() (string, error) {
+		return workingDir, nil
+	}
+	osExecutable = func() (string, error) {
+		return filepath.Join(releaseDir, "chatgpt-image-studio.exe"), nil
+	}
+
+	if got := normalizeRoot(""); got != releaseDir {
+		t.Fatalf("expected normalizeRoot to prefer executable dir %q, got %q", releaseDir, got)
 	}
 }

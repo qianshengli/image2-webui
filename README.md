@@ -1,12 +1,18 @@
 # ChatGpt Image Studio
 
-ChatGpt Image Studio 是一个单仓库交付的图片工作流项目：
+ChatGpt Image Studio 是一个单服务交付的图片工作流项目：
 
-- `backend/`：Go 后端，负责 API 与静态资源托管
-- `web/`：Next.js 前端，构建后静态导出到 `web/out`
-- `scripts/`：统一的构建、开发、检查脚本
+- `backend/`：Go 后端，负责图片接口、账号池、配置管理和静态资源托管
+- `web/`：Vite + React 前端，构建后输出到 `web/dist`
+- `scripts/`：本地开发、检查、构建脚本
+- `.github/workflows/`：CI 与 GitHub Release 发布流程
 
-项目的交付方式是“一个服务统一承载前后端”：前端构建产物输出到 `web/out`，后端直接托管它，不需要把前端和后端拆成两个独立产品部署。
+项目当前交付方式是“一个二进制 + 一份静态前端 + 本地配置目录”：
+
+- 前端不需要单独部署
+- 后端运行时直接托管 `static/`
+- 首次启动时自动生成 `data/config.toml`
+- 发布包解压后即可本地运行
 
 > [!WARNING]
 > 免责声明：
@@ -32,6 +38,8 @@ ChatGpt Image Studio 是一个单仓库交付的图片工作流项目：
 - 本地认证文件导入与账号池管理
 - 额度查询与刷新
 - 与 CLIProxyAPI 兼容的 CPA 双向同步
+- 请求方向记录页，可区分官方与 CPA 链路
+- 配置管理页，可直接修改 `data/config.toml`
 
 ## 仓库结构
 
@@ -39,20 +47,21 @@ ChatGpt Image Studio 是一个单仓库交付的图片工作流项目：
 .
 ├── backend/                  Go 后端
 │   ├── api/                  HTTP 路由与处理器
-│   ├── internal/             配置、账号、同步、中间件
-│   ├── data/                 运行时数据目录（默认不入库）
-│   ├── data/config.defaults.toml  默认配置（复制为 config.toml 后生效）
+│   ├── internal/             配置、账号、同步、中间件、版本信息
+│   ├── data/                 默认模板与本地运行数据目录
+│   ├── static/               本地开发时同步的前端静态资源（构建产物，不入库）
 │   └── main.go
-├── web/                      Next.js 前端
+├── web/                      Vite 前端
+│   ├── src/                  React 页面与组件
+│   └── dist/                 构建产物（不入库）
+├── packaging/                发布包附带文件
 ├── scripts/                  build / dev / check 脚本
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
+└── .github/workflows/        CI / Release
 ```
 
 ## 环境要求
 
-- Go `1.26+`
+- Go `1.25+`
 - Node.js `24+`
 - npm `10+`
 
@@ -63,21 +72,53 @@ git clone https://github.com/peiyizhi0724/ChatGpt-Image-Studio.git
 cd ChatGpt-Image-Studio
 ```
 
-## 快速开始
+## 本地开发
 
-### 1. 准备本地配置
+### 启动开发环境
 
-先复制默认配置为本地配置：
+Windows：
 
 ```powershell
-Copy-Item backend/data/config.defaults.toml backend/data/config.toml
+./scripts/dev.ps1
 ```
+
+macOS / Linux：
 
 ```bash
-cp backend/data/config.defaults.toml backend/data/config.toml
+chmod +x ./scripts/*.sh
+./scripts/dev.sh
 ```
 
-最小本地配置：
+开发脚本会自动完成：
+
+1. 安装前端依赖
+2. 构建 `web/dist`
+3. 同步前端资源到 `backend/static`
+4. 启动 Go 后端
+
+默认地址：
+
+- `http://127.0.0.1:7000`
+
+健康检查：
+
+- `GET /health`
+
+### 配置文件
+
+程序启动时会确保以下文件存在：
+
+- `data/config.example.toml`
+- `data/config.toml`
+
+在仓库开发模式下，上述路径实际对应：
+
+- `backend/data/config.example.toml`
+- `backend/data/config.toml`
+
+如果 `config.toml` 不存在，程序会自动按内置模板生成，无需手动复制。
+
+最小配置示例：
 
 ```toml
 [app]
@@ -104,12 +145,6 @@ mode = "fixed"
 sync_enabled = false
 ```
 
-说明：
-
-- 当前仅支持固定代理模式 `fixed`
-- `url` 支持 `socks5`、`socks5h`、`http`、`https`
-- `sync_enabled = true` 时，CPA 同步请求也会复用同一代理
-
 如果需要调整 `Free` / `Plus / Pro / Team` 账号的图片链路，可在 `[chatgpt]` 下补充：
 
 ```toml
@@ -117,53 +152,19 @@ sync_enabled = false
 free_image_route = "legacy"
 free_image_model = "auto"
 paid_image_route = "responses"
-paid_image_model = "gpt-5-3"
+paid_image_model = "gpt-5.4-mini"
 ```
 
 说明：
 
 - `free_image_route`
   控制 `Free` 账号图片请求走哪条链路。
-  `legacy` 表示走当前项目原有的 `/backend-api/conversation` 流程；
-  `responses` 表示走官方 `https://chatgpt.com/backend-api/codex/responses` 流程。
 - `free_image_model`
-  控制 `Free` 账号真正发给上游的模型名。默认 `auto`，表示保留旧行为，让上游自动选择兼容模型。
+  控制 `Free` 账号真正发给上游的模型名。
 - `paid_image_route`
-  控制 `Plus / Pro / Team` 账号图片请求走哪条链路。默认 `responses`。
+  控制 `Plus / Pro / Team` 账号图片请求走哪条链路。
 - `paid_image_model`
-  控制 `Plus / Pro / Team` 账号真正发给上游的模型名。默认 `gpt-5-3`，也可以改成 `gpt-5.4`。
-
-当前默认建议：
-
-- `Free` 账号保持 `free_image_route = "legacy"`，因为 `Free` 账号走 `responses + image_generation` 通常会遇到权限限制。
-- `Plus / Pro / Team` 账号默认使用 `paid_image_route = "responses"`，也就是优先走 `responses` 链路。
-- paid 的编辑图 / 超分虽然支持走 `responses`，但当前后端只会在“单图且请求体足够小”时自动切到 `responses`；大图、多图、较大 mask 会自动回退到旧链路，避免请求体过大。
-
-> [!WARNING]
-> 当前默认的 paid 图像链路会让 `Plus / Pro / Team` 账号优先走 `responses` 接口，但这条默认路径目前只完成了代码级与单元测试级验证，尚未经过真实付费账号的端到端实测。上线前建议先用非重要付费号做一次完整 smoke test。
-
-### 2. 启动开发环境
-
-Windows：
-
-```powershell
-./scripts/dev.ps1
-```
-
-macOS / Linux：
-
-```bash
-chmod +x ./scripts/*.sh
-./scripts/dev.sh
-```
-
-默认地址：
-
-- `http://127.0.0.1:7000`
-
-健康检查：
-
-- `GET /health`
+  控制 `Plus / Pro / Team` 账号真正发给上游的模型名。
 
 ## 构建
 
@@ -179,12 +180,27 @@ macOS / Linux：
 ./scripts/build.sh
 ```
 
-构建产物：
+构建脚本会执行：
 
-- 前端静态文件：`web/out`
-- 后端二进制：`dist/`
+1. 构建前端 `web/dist`
+2. 同步前端资源到 `backend/static`
+3. 构建后端二进制
+4. 生成本地发布目录 `dist/package`
 
-## 验证
+本地发布目录结构：
+
+```text
+dist/package/
+├── chatgpt-image-studio.exe / chatgpt-image-studio
+├── data/
+│   └── config.example.toml
+├── static/
+│   ├── index.html
+│   └── assets/...
+└── README.txt
+```
+
+## 检查
 
 Windows：
 
@@ -205,20 +221,81 @@ macOS / Linux：
 - `npm run lint`
 - `npm run build`
 
-## Docker 部署
+## 发布包
 
-一键构建并启动：
+GitHub Release 会自动生成多平台压缩包，命名格式：
 
-```bash
-docker compose up --build
+```text
+ChatGptImageStudio-v1.2.3-windows-amd64.zip
+ChatGptImageStudio-v1.2.3-windows-arm64.zip
+ChatGptImageStudio-v1.2.3-linux-amd64.zip
+ChatGptImageStudio-v1.2.3-linux-arm64.zip
+ChatGptImageStudio-v1.2.3-darwin-amd64.zip
+ChatGptImageStudio-v1.2.3-darwin-arm64.zip
 ```
 
-说明：
+压缩包内结构：
 
-- 服务默认监听 `7000`
-- `./backend/data` 会挂载到容器内 `/app/backend/data`
-- `docker-compose.yml` 默认设置 `TZ=${TZ:-Asia/Shanghai}`，如需其他时区可在启动前覆盖 `TZ`
-- 本地认证文件、同步状态、本地配置都保存在宿主机，不会丢失
+```text
+chatgpt-image-studio.exe / chatgpt-image-studio
+data/
+  config.example.toml
+static/
+README.txt
+```
+
+首次启动后，程序会自动生成：
+
+```text
+data/config.toml
+```
+
+## 启动失败兜底
+
+如果启动失败，程序会：
+
+- 在命令行输出中文错误信息
+- 将详细信息写入 `data/last-startup-error.txt`
+
+当前重点处理的失败场景：
+
+- 端口占用
+- 配置文件损坏
+- 静态资源缺失
+- 首次生成配置文件失败
+
+## 版本规则
+
+- Git tag 统一使用：`vMAJOR.MINOR.PATCH`
+- 默认只递增小版本中的 `PATCH`
+- 当 `PATCH` 满 `24` 后，进入下一个 `MINOR`，并从 `.1` 重新开始
+- `MAJOR` 版本只在人工指定时提升
+
+后端版本信息会注入二进制，并通过 `/version` 返回：
+
+```json
+{
+  "version": "v1.2.3",
+  "commit": "abc1234",
+  "buildTime": "2026-04-23T12:00:00Z"
+}
+```
+
+前端构建版本通过 `VITE_APP_VERSION` 注入。
+
+## GitHub Actions
+
+- CI：`.github/workflows/ci.yml`
+- Release：`.github/workflows/release.yml`
+
+Release 工作流会自动：
+
+1. 构建前端 `web/dist`
+2. 构建多平台 Go 二进制
+3. 组装标准发布目录
+4. 打包成 zip
+5. 生成 `checksums.txt`
+6. 上传到 GitHub Release
 
 ## 主要接口
 
@@ -238,21 +315,24 @@ docker compose up --build
 - `POST /api/accounts/update`
 - `GET /api/accounts/{id}/quota`
 
+### 配置与请求记录
+
+- `GET /api/config`
+- `PUT /api/config`
+- `GET /api/requests`
+
 ### 同步
 
 - `GET /api/sync/status`
 - `POST /api/sync/run`
-
-`/api/sync/run` 支持两个方向：
-
-- `pull`：从 CPA 拉取本地缺失账号与不一致状态
-- `push`：把本地缺失账号与不一致状态同步到 CPA
 
 ### 图片接口
 
 - `POST /v1/images/generations`
 - `POST /v1/images/edits`
 - `POST /v1/images/upscale`
+- `POST /v1/chat/completions`
+- `POST /v1/responses`
 - `GET /v1/models`
 - `GET /v1/files/image/{filename}`
 
@@ -261,44 +341,17 @@ docker compose up --build
 以下内容默认不会提交到 Git：
 
 - `backend/data/config.toml`
+- `backend/data/config.example.toml`
 - `backend/data/accounts_state.json`
 - `backend/data/auths/*.json`
 - `backend/data/sync_state/*.json`
 - `backend/data/tmp/`
-- 构建产物、日志、临时文件、本地二进制
+- `backend/data/last-startup-error.txt`
+- `backend/static/`
+- `web/dist/`
+- 发布产物、日志、临时文件、本地二进制
 
 不要提交认证文件、管理密钥、运行状态或日志中的敏感内容。
-
-## 认证文件导入规则
-
-导入认证文件时，系统按 `账号身份 + 账号类型` 判重，而不是只按 token 判重。
-
-身份优先级：
-
-- `account_id`
-- `chatgpt_account_id`
-- `user_id`
-- `email`
-
-时间优先级：
-
-- `last_refresh`
-- `last_refreshed_at`
-- `updated_at`
-- `modified_at`
-- `created_at`
-
-如果账号身份和类型相同，则保留更新的一份。
-
-## 发布与交付
-
-- GitHub CI：`.github/workflows/ci.yml`
-- Docker 交付：`Dockerfile` 与 `docker-compose.yml`
-- 安全反馈说明：`SECURITY.md`
-
-## 社区支持
-
-- Linux.do 社区：<https://linux.do/>
 
 ## 许可证
 

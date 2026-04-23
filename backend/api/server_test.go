@@ -1,8 +1,10 @@
 package api
 
 import (
+	"errors"
 	"testing"
 
+	"chatgpt2api/internal/accounts"
 	"chatgpt2api/internal/config"
 )
 
@@ -89,5 +91,55 @@ func TestResolveImageUpstreamModelFromConfig(t *testing.T) {
 	}
 	if got := server.resolveImageUpstreamModel("gpt-image-2", "Free"); got != "auto" {
 		t.Fatalf("resolveImageUpstreamModel() = %q, want %q", got, "auto")
+	}
+}
+
+func TestResolveImageAcquireError(t *testing.T) {
+	lastErr := errors.New("refresh failed")
+	noAvailableErr := errors.New("read dir failed")
+
+	tests := []struct {
+		name             string
+		mode             string
+		err              error
+		lastRetryableErr error
+		wantMessage      string
+		wantCode         string
+	}{
+		{
+			name:        "cpa mode maps empty paid pool to business error",
+			mode:        "cpa",
+			err:         accounts.ErrNoAvailableImageAuth,
+			wantMessage: "当前没有可用的 Plus / Pro / Team 图片账号用于 CPA 模式",
+			wantCode:    "no_cpa_image_accounts",
+		},
+		{
+			name:             "retry exhaustion keeps last real error",
+			mode:             "cpa",
+			err:              accounts.ErrNoAvailableImageAuth,
+			lastRetryableErr: lastErr,
+			wantMessage:      lastErr.Error(),
+		},
+		{
+			name:        "non sentinel error passes through",
+			mode:        "cpa",
+			err:         noAvailableErr,
+			wantMessage: noAvailableErr.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveImageAcquireError(tt.mode, tt.err, tt.lastRetryableErr)
+			if got == nil {
+				t.Fatal("resolveImageAcquireError() returned nil")
+			}
+			if got.Error() != tt.wantMessage {
+				t.Fatalf("resolveImageAcquireError() error = %q, want %q", got.Error(), tt.wantMessage)
+			}
+			if tt.wantCode != "" && requestErrorCode(got) != tt.wantCode {
+				t.Fatalf("resolveImageAcquireError() code = %q, want %q", requestErrorCode(got), tt.wantCode)
+			}
+		})
 	}
 }

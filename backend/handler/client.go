@@ -20,9 +20,38 @@ import (
 
 const (
 	baseURL              = "https://chatgpt.com/backend-api"
-	sseTimeout           = 5 * time.Minute
-	defaultUpstreamModel = "gpt-5-3"
+	defaultUpstreamModel = "gpt-5.4-mini"
 )
+
+const (
+	defaultRequestTimeout = 30 * time.Second
+	defaultSSETimeout     = 5 * time.Minute
+	defaultPollInterval   = 3 * time.Second
+	defaultPollMaxWait    = 3 * time.Minute
+)
+
+type ImageRequestConfig struct {
+	RequestTimeout time.Duration
+	SSETimeout     time.Duration
+	PollInterval   time.Duration
+	PollMaxWait    time.Duration
+}
+
+func normalizeImageRequestConfig(cfg ImageRequestConfig) ImageRequestConfig {
+	if cfg.RequestTimeout <= 0 {
+		cfg.RequestTimeout = defaultRequestTimeout
+	}
+	if cfg.SSETimeout <= 0 {
+		cfg.SSETimeout = defaultSSETimeout
+	}
+	if cfg.PollInterval <= 0 {
+		cfg.PollInterval = defaultPollInterval
+	}
+	if cfg.PollMaxWait <= 0 {
+		cfg.PollMaxWait = defaultPollMaxWait
+	}
+	return cfg
+}
 
 // ImageResult represents a single generated image.
 type ImageResult struct {
@@ -35,11 +64,14 @@ type ImageResult struct {
 }
 
 type ChatGPTClient struct {
-	accessToken string
-	cookies     string
-	oaiDeviceID string
-	httpClient  *http.Client
-	proxyURL    string
+	accessToken  string
+	cookies      string
+	oaiDeviceID  string
+	httpClient   *http.Client
+	streamClient *http.Client
+	proxyURL     string
+	pollInterval time.Duration
+	pollMaxWait  time.Duration
 }
 
 func NewChatGPTClient(accessToken, cookies string) *ChatGPTClient {
@@ -47,15 +79,26 @@ func NewChatGPTClient(accessToken, cookies string) *ChatGPTClient {
 }
 
 func NewChatGPTClientWithProxy(accessToken, cookies, proxyURL string) *ChatGPTClient {
+	return NewChatGPTClientWithProxyAndConfig(accessToken, cookies, proxyURL, ImageRequestConfig{})
+}
+
+func NewChatGPTClientWithProxyAndConfig(accessToken, cookies, proxyURL string, requestConfig ImageRequestConfig) *ChatGPTClient {
+	requestConfig = normalizeImageRequestConfig(requestConfig)
 	return &ChatGPTClient{
 		accessToken: accessToken,
 		cookies:     cookies,
 		oaiDeviceID: uuid.NewString(),
 		proxyURL:    strings.TrimSpace(proxyURL),
 		httpClient: &http.Client{
-			Timeout:   sseTimeout + 30*time.Second,
+			Timeout:   requestConfig.RequestTimeout,
 			Transport: newChromeTransport(proxyURL),
 		},
+		streamClient: &http.Client{
+			Timeout:   requestConfig.SSETimeout + 30*time.Second,
+			Transport: newChromeTransport(proxyURL),
+		},
+		pollInterval: requestConfig.PollInterval,
+		pollMaxWait:  requestConfig.PollMaxWait,
 	}
 }
 
@@ -304,7 +347,7 @@ func (c *ChatGPTClient) processUploadStream(ctx context.Context, fileID, useCase
 	processReq.Header.Set("x-openai-target-path", "/backend-api/files/process_upload_stream")
 	processReq.Header.Set("x-openai-target-route", "/backend-api/files/process_upload_stream")
 
-	processResp, err := c.httpClient.Do(processReq)
+	processResp, err := c.streamClient.Do(processReq)
 	if err != nil {
 		return fmt.Errorf("process upload stream request: %w", err)
 	}
@@ -650,7 +693,7 @@ func (c *ChatGPTClient) doConversation(ctx context.Context, body map[string]any)
 		req.Header.Set("openai-sentinel-proof-token", proofToken)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.streamClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("conversation request: %w", err)
 	}
@@ -851,17 +894,12 @@ func (c *ChatGPTClient) extractImages(ctx context.Context, msg *sseMessage, conv
 
 // pollForImages polls GET /backend-api/conversation/{id} until image results appear.
 func (c *ChatGPTClient) pollForImages(ctx context.Context, conversationID, rootMessageID string) ([]ImageResult, error) {
-	const (
-		pollInterval = 3 * time.Second
-		maxPollTime  = 3 * time.Minute
-	)
-
-	deadline := time.Now().Add(maxPollTime)
+	deadline := time.Now().Add(c.pollMaxWait)
 	for time.Now().Before(deadline) {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(pollInterval):
+		case <-time.After(c.pollInterval):
 		}
 
 		images, err := c.fetchConversationImages(ctx, conversationID, rootMessageID)

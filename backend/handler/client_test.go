@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -161,11 +162,11 @@ func TestResolveImageUpstreamModel(t *testing.T) {
 	}{
 		{name: "default request falls back to gpt image 2 behavior", requested: "", accountType: "", expectedModel: "auto"},
 		{name: "gpt image 1 uses auto for free", requested: "gpt-image-1", accountType: "Free", expectedModel: "auto"},
-		{name: "gpt image 1 uses gpt 5 3 for paid", requested: "gpt-image-1", accountType: "Plus", expectedModel: "gpt-5-3"},
+		{name: "gpt image 1 uses gpt 5 4 mini for paid", requested: "gpt-image-1", accountType: "Plus", expectedModel: "gpt-5.4-mini"},
 		{name: "gpt image 2 uses auto for free", requested: "gpt-image-2", accountType: "Free", expectedModel: "auto"},
 		{name: "gpt image 2 uses auto when account type missing", requested: "gpt-image-2", accountType: "", expectedModel: "auto"},
-		{name: "gpt image 2 uses gpt 5 3 for paid", requested: "gpt-image-2", accountType: "Pro", expectedModel: "gpt-5-3"},
-		{name: "explicit upstream model is preserved", requested: "gpt-5-3", accountType: "Free", expectedModel: "gpt-5-3"},
+		{name: "gpt image 2 uses gpt 5 4 mini for paid", requested: "gpt-image-2", accountType: "Pro", expectedModel: "gpt-5.4-mini"},
+		{name: "explicit upstream model is preserved", requested: "gpt-5.4-mini", accountType: "Free", expectedModel: "gpt-5.4-mini"},
 	}
 
 	for _, tt := range tests {
@@ -188,5 +189,28 @@ func TestBuildConversationBodyUsesProvidedModel(t *testing.T) {
 	body = client.buildConversationBody("draw a cat", "", "", "", nil)
 	if got := body["model"]; got != defaultUpstreamModel {
 		t.Fatalf("expected default model %s, got %v", defaultUpstreamModel, got)
+	}
+}
+
+func TestNewChatGPTClientWithProxyAndConfigUsesProvidedTimeouts(t *testing.T) {
+	requestConfig := ImageRequestConfig{
+		RequestTimeout: 12 * time.Second,
+		SSETimeout:     90 * time.Second,
+		PollInterval:   5 * time.Second,
+		PollMaxWait:    42 * time.Second,
+	}
+
+	client := NewChatGPTClientWithProxyAndConfig("token", "cookie", "http://proxy.local", requestConfig)
+	if client.httpClient.Timeout != requestConfig.RequestTimeout {
+		t.Fatalf("request timeout = %v, want %v", client.httpClient.Timeout, requestConfig.RequestTimeout)
+	}
+	if client.streamClient.Timeout != requestConfig.SSETimeout+30*time.Second {
+		t.Fatalf("stream timeout = %v, want %v", client.streamClient.Timeout, requestConfig.SSETimeout+30*time.Second)
+	}
+	if client.pollInterval != requestConfig.PollInterval {
+		t.Fatalf("poll interval = %v, want %v", client.pollInterval, requestConfig.PollInterval)
+	}
+	if client.pollMaxWait != requestConfig.PollMaxWait {
+		t.Fatalf("poll max wait = %v, want %v", client.pollMaxWait, requestConfig.PollMaxWait)
 	}
 }

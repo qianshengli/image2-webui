@@ -73,6 +73,15 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.buildConfigPayload())
 }
 
+func (s *Server) handleGetDefaultConfig(w http.ResponseWriter, r *http.Request) {
+	defaultCfg, err := config.LoadDefaults(s.cfg.Paths())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, s.buildConfigPayloadFromConfig(defaultCfg))
+}
+
 func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	var payload configPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -157,55 +166,59 @@ func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) buildConfigPayload() configPayload {
+	return s.buildConfigPayloadFromConfig(s.cfg)
+}
+
+func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload {
 	payload := configPayload{}
-	payload.App.Name = s.cfg.App.Name
+	payload.App.Name = cfg.App.Name
 	payload.App.Version = s.cfg.App.Version
-	payload.App.APIKey = s.cfg.App.APIKey
-	payload.App.AuthKey = s.cfg.App.AuthKey
-	payload.App.ImageFormat = s.cfg.App.ImageFormat
-	payload.App.MaxUploadSizeMB = s.cfg.App.MaxUploadSizeMB
+	payload.App.APIKey = cfg.App.APIKey
+	payload.App.AuthKey = cfg.App.AuthKey
+	payload.App.ImageFormat = cfg.App.ImageFormat
+	payload.App.MaxUploadSizeMB = cfg.App.MaxUploadSizeMB
 
-	payload.Server.Host = s.cfg.Server.Host
-	payload.Server.Port = s.cfg.Server.Port
-	payload.Server.StaticDir = s.cfg.Server.StaticDir
+	payload.Server.Host = cfg.Server.Host
+	payload.Server.Port = cfg.Server.Port
+	payload.Server.StaticDir = cfg.Server.StaticDir
 
-	payload.ChatGPT.Model = s.cfg.ChatGPT.Model
-	payload.ChatGPT.SSETimeout = s.cfg.ChatGPT.SSETimeout
-	payload.ChatGPT.PollInterval = s.cfg.ChatGPT.PollInterval
-	payload.ChatGPT.PollMaxWait = s.cfg.ChatGPT.PollMaxWait
-	payload.ChatGPT.RequestTimeout = s.cfg.ChatGPT.RequestTimeout
-	payload.ChatGPT.ImageMode = s.cfg.ChatGPT.ImageMode
-	payload.ChatGPT.FreeImageRoute = s.cfg.ChatGPT.FreeImageRoute
-	payload.ChatGPT.FreeImageModel = s.cfg.ChatGPT.FreeImageModel
-	payload.ChatGPT.PaidImageRoute = s.cfg.ChatGPT.PaidImageRoute
-	payload.ChatGPT.PaidImageModel = s.cfg.ChatGPT.PaidImageModel
+	payload.ChatGPT.Model = cfg.ChatGPT.Model
+	payload.ChatGPT.SSETimeout = cfg.ChatGPT.SSETimeout
+	payload.ChatGPT.PollInterval = cfg.ChatGPT.PollInterval
+	payload.ChatGPT.PollMaxWait = cfg.ChatGPT.PollMaxWait
+	payload.ChatGPT.RequestTimeout = cfg.ChatGPT.RequestTimeout
+	payload.ChatGPT.ImageMode = cfg.ChatGPT.ImageMode
+	payload.ChatGPT.FreeImageRoute = cfg.ChatGPT.FreeImageRoute
+	payload.ChatGPT.FreeImageModel = cfg.ChatGPT.FreeImageModel
+	payload.ChatGPT.PaidImageRoute = cfg.ChatGPT.PaidImageRoute
+	payload.ChatGPT.PaidImageModel = cfg.ChatGPT.PaidImageModel
 
-	payload.Accounts.DefaultQuota = s.cfg.Accounts.DefaultQuota
-	payload.Accounts.PreferRemoteRefresh = s.cfg.Accounts.PreferRemoteRefresh
-	payload.Accounts.RefreshWorkers = s.cfg.Accounts.RefreshWorkers
+	payload.Accounts.DefaultQuota = cfg.Accounts.DefaultQuota
+	payload.Accounts.PreferRemoteRefresh = cfg.Accounts.PreferRemoteRefresh
+	payload.Accounts.RefreshWorkers = cfg.Accounts.RefreshWorkers
 
-	payload.Storage.AuthDir = s.cfg.Storage.AuthDir
-	payload.Storage.StateFile = s.cfg.Storage.StateFile
-	payload.Storage.SyncStateDir = s.cfg.Storage.SyncStateDir
-	payload.Storage.ImageDir = s.cfg.Storage.ImageDir
+	payload.Storage.AuthDir = cfg.Storage.AuthDir
+	payload.Storage.StateFile = cfg.Storage.StateFile
+	payload.Storage.SyncStateDir = cfg.Storage.SyncStateDir
+	payload.Storage.ImageDir = cfg.Storage.ImageDir
 
-	payload.Sync.Enabled = s.cfg.Sync.Enabled
-	payload.Sync.BaseURL = s.cfg.Sync.BaseURL
-	payload.Sync.ManagementKey = s.cfg.Sync.ManagementKey
-	payload.Sync.RequestTimeout = s.cfg.Sync.RequestTimeout
-	payload.Sync.Concurrency = s.cfg.Sync.Concurrency
-	payload.Sync.ProviderType = s.cfg.Sync.ProviderType
+	payload.Sync.Enabled = cfg.Sync.Enabled
+	payload.Sync.BaseURL = cfg.Sync.BaseURL
+	payload.Sync.ManagementKey = cfg.Sync.ManagementKey
+	payload.Sync.RequestTimeout = cfg.Sync.RequestTimeout
+	payload.Sync.Concurrency = cfg.Sync.Concurrency
+	payload.Sync.ProviderType = cfg.Sync.ProviderType
 
-	payload.Proxy.Enabled = s.cfg.Proxy.Enabled
-	payload.Proxy.URL = s.cfg.Proxy.URL
-	payload.Proxy.Mode = s.cfg.Proxy.Mode
-	payload.Proxy.SyncEnabled = s.cfg.Proxy.SyncEnabled
+	payload.Proxy.Enabled = cfg.Proxy.Enabled
+	payload.Proxy.URL = cfg.Proxy.URL
+	payload.Proxy.Mode = cfg.Proxy.Mode
+	payload.Proxy.SyncEnabled = cfg.Proxy.SyncEnabled
 
-	payload.CPA.BaseURL = s.cfg.CPA.BaseURL
-	payload.CPA.APIKey = s.cfg.CPA.APIKey
-	payload.CPA.RequestTimeout = s.cfg.CPA.RequestTimeout
+	payload.CPA.BaseURL = cfg.CPA.BaseURL
+	payload.CPA.APIKey = cfg.CPA.APIKey
+	payload.CPA.RequestTimeout = cfg.CPA.RequestTimeout
 
-	payload.Log.LogAllRequests = s.cfg.Log.LogAllRequests
+	payload.Log.LogAllRequests = cfg.Log.LogAllRequests
 	payload.Paths = s.cfg.Paths()
 	return payload
 }

@@ -5,13 +5,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEB_DIR="$REPO_ROOT/web"
 BACKEND_DIR="$REPO_ROOT/backend"
 
-echo "[1/4] Running backend tests..."
+echo "[1/5] Running backend tests..."
 cd "$BACKEND_DIR"
 go test ./...
 
 echo "[2/5] Ensuring frontend dependencies..."
 cd "$WEB_DIR"
-if [ ! -x node_modules/.bin/tsc ] || [ ! -x node_modules/.bin/eslint ] || [ ! -x node_modules/.bin/next ]; then
+if [ ! -x node_modules/.bin/tsc ] || [ ! -x node_modules/.bin/eslint ] || [ ! -x node_modules/.bin/vite ]; then
   npm ci
 fi
 

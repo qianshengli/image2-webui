@@ -18,6 +18,7 @@ import (
 
 	"chatgpt2api/handler"
 	"chatgpt2api/internal/accounts"
+	"chatgpt2api/internal/buildinfo"
 	"chatgpt2api/internal/cliproxy"
 	"chatgpt2api/internal/config"
 	"chatgpt2api/internal/middleware"
@@ -65,6 +66,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/accounts/refresh", s.requireUIAuth(http.HandlerFunc(s.handleRefreshAccounts)))
 	mux.Handle("POST /api/accounts/update", s.requireUIAuth(http.HandlerFunc(s.handleUpdateAccount)))
 	mux.Handle("GET /api/config", s.requireUIAuth(http.HandlerFunc(s.handleGetConfig)))
+	mux.Handle("GET /api/config/defaults", s.requireUIAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
 	mux.Handle("PUT /api/config", s.requireUIAuth(http.HandlerFunc(s.handleUpdateConfig)))
 	mux.Handle("GET /api/requests", s.requireUIAuth(http.HandlerFunc(s.handleListRequestLogs)))
 	mux.Handle("GET /api/sync/status", s.requireUIAuth(http.HandlerFunc(s.handleSyncStatus)))
@@ -91,12 +93,16 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":      true,
-		"version": s.cfg.App.Version,
+		"version": firstNonEmpty(buildinfo.Version, s.cfg.App.Version),
 	})
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"version": s.cfg.App.Version})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"version":   firstNonEmpty(buildinfo.Version, s.cfg.App.Version),
+		"commit":    buildinfo.Commit,
+		"buildTime": buildinfo.BuildTime,
+	})
 }
 
 func (s *Server) handleListAccounts(w http.ResponseWriter, r *http.Request) {
@@ -513,6 +519,7 @@ func (s *Server) handleImageUpscale(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) withImageResults(ctx context.Context, operation, responseFormat, preferredAccountID, requestedModel string, responsesEligible bool, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, error) {
+	mode := s.configuredImageMode()
 	if strings.TrimSpace(preferredAccountID) != "" {
 		authFile, account, err := s.store.FindImageAuthByID(preferredAccountID)
 		if err != nil {
@@ -526,19 +533,40 @@ func (s *Server) withImageResults(ctx context.Context, operation, responseFormat
 	}
 
 	attempted := map[string]struct{}{}
+	var lastRetryableErr error
+	var allowAccount func(accounts.PublicAccount) bool
+	if mode == "cpa" {
+		allowAccount = func(account accounts.PublicAccount) bool {
+			return isPaidImageAccountType(account.Type)
+		}
+	}
 	for {
-		authFile, account, err := s.store.AcquireImageAuth(attempted)
+		authFile, account, err := s.store.AcquireImageAuthFiltered(attempted, allowAccount)
 		if err != nil {
-			return nil, err
+			return nil, resolveImageAcquireError(mode, err, lastRetryableErr)
 		}
 		attempted[authFile.AccessToken] = struct{}{}
 
 		data, retryable, err := s.runImageRequest(ctx, authFile, account, operation, responseFormat, false, requestedModel, responsesEligible, run, r)
 		if retryable && len(attempted) < 64 {
+			lastRetryableErr = err
 			continue
 		}
 		return data, err
 	}
+}
+
+func resolveImageAcquireError(mode string, err, lastRetryableErr error) error {
+	if !errors.Is(err, accounts.ErrNoAvailableImageAuth) {
+		return err
+	}
+	if lastRetryableErr != nil {
+		return lastRetryableErr
+	}
+	if mode == "cpa" {
+		return newRequestError("no_cpa_image_accounts", "当前没有可用的 Plus / Pro / Team 图片账号用于 CPA 模式")
+	}
+	return err
 }
 
 func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAuth, account accounts.PublicAccount, operation, responseFormat string, preferredAccount bool, requestedModel string, responsesEligible bool, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, bool, error) {
@@ -653,16 +681,18 @@ func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAu
 		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
 		direction = "official"
 		if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
-			client = handler.NewResponsesClientWithProxy(
+			client = handler.NewResponsesClientWithProxyAndConfig(
 				authFile.AccessToken,
 				s.cfg.ChatGPTProxyURL(),
 				authFile.Data,
+				s.imageRequestConfig(),
 			)
 		} else {
-			client = handler.NewChatGPTClientWithProxy(
+			client = handler.NewChatGPTClientWithProxyAndConfig(
 				authFile.AccessToken,
 				firstNonEmpty(stringValue(authFile.Data["cookies"]), stringValue(authFile.Data["cookie"])),
 				s.cfg.ChatGPTProxyURL(),
+				s.imageRequestConfig(),
 			)
 		}
 	}
@@ -1136,6 +1166,15 @@ func (s *Server) configuredImageRoute(accountType string) string {
 		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.PaidImageRoute, "responses")
 	default:
 		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.FreeImageRoute, "legacy")
+	}
+}
+
+func (s *Server) imageRequestConfig() handler.ImageRequestConfig {
+	return handler.ImageRequestConfig{
+		RequestTimeout: time.Duration(max(1, s.cfg.ChatGPT.RequestTimeout)) * time.Second,
+		SSETimeout:     time.Duration(max(1, s.cfg.ChatGPT.SSETimeout)) * time.Second,
+		PollInterval:   time.Duration(max(1, s.cfg.ChatGPT.PollInterval)) * time.Second,
+		PollMaxWait:    time.Duration(max(1, s.cfg.ChatGPT.PollMaxWait)) * time.Second,
 	}
 }
 

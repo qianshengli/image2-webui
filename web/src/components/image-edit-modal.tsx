@@ -442,7 +442,6 @@ export function ImageEditModal({
           <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-auto">
             <div className="relative inline-flex max-h-full max-w-full items-center justify-center">
               {/* 原生 img 便于直接读取天然尺寸并与遮罩 canvas 做 1:1 叠加。 */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 ref={imageRef}
                 src={imageSrc}

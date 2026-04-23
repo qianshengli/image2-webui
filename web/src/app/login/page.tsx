@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CircleAlert, LoaderCircle, LockKeyhole, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,7 +11,7 @@ import { login } from "@/lib/api";
 import { setStoredAuthKey } from "@/store/auth";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [authKey, setAuthKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
     try {
       await login(normalizedAuthKey);
       await setStoredAuthKey(normalizedAuthKey);
-      router.replace("/image");
+      navigate("/image", { replace: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "登录失败";
       toast.error(message);

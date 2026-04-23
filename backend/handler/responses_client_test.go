@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestResolveChatGPTAccountIDFromAccessToken(t *testing.T) {
@@ -93,5 +94,31 @@ func TestSupportsResponsesInlineEdit(t *testing.T) {
 				t.Fatalf("SupportsResponsesInlineEdit() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestNewResponsesClientWithProxyAndConfigUsesProvidedSSETimeout(t *testing.T) {
+	requestConfig := ImageRequestConfig{
+		RequestTimeout: 15 * time.Second,
+		SSETimeout:     75 * time.Second,
+		PollInterval:   4 * time.Second,
+		PollMaxWait:    33 * time.Second,
+	}
+
+	client := NewResponsesClientWithProxyAndConfig("token", "http://proxy.local", map[string]any{
+		"account_id": "acct-1",
+	}, requestConfig)
+
+	if client.httpClient.Timeout != requestConfig.SSETimeout+30*time.Second {
+		t.Fatalf("responses stream timeout = %v, want %v", client.httpClient.Timeout, requestConfig.SSETimeout+30*time.Second)
+	}
+	if client.backend.httpClient.Timeout != requestConfig.RequestTimeout {
+		t.Fatalf("backend request timeout = %v, want %v", client.backend.httpClient.Timeout, requestConfig.RequestTimeout)
+	}
+	if client.backend.pollInterval != requestConfig.PollInterval {
+		t.Fatalf("backend poll interval = %v, want %v", client.backend.pollInterval, requestConfig.PollInterval)
+	}
+	if client.backend.pollMaxWait != requestConfig.PollMaxWait {
+		t.Fatalf("backend poll max wait = %v, want %v", client.backend.pollMaxWait, requestConfig.PollMaxWait)
 	}
 }

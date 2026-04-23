@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  Shield,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -110,6 +111,9 @@ const metricCards = [
   { key: "disabled", label: "禁用账户", color: "text-stone-500", icon: Ban },
   { key: "quota", label: "剩余额度", color: "text-blue-500", icon: RefreshCw },
 ] as const;
+
+let cachedSyncStatus: SyncStatusResponse | null = null;
+let hasLoadedSyncStatus = false;
 
 function formatCompact(value: number) {
   if (value >= 1000) {
@@ -283,11 +287,18 @@ export default function AccountsPage() {
   };
 
   const loadSync = async (silent = false) => {
+    if (!silent && hasLoadedSyncStatus && cachedSyncStatus) {
+      setSyncStatus(cachedSyncStatus);
+      setIsSyncLoading(false);
+      return;
+    }
     if (!silent) {
       setIsSyncLoading(true);
     }
     try {
       const data = await fetchSyncStatus();
+      cachedSyncStatus = data;
+      hasLoadedSyncStatus = true;
       setSyncStatus(data);
     } catch (error) {
       const message = error instanceof Error ? error.message : "读取同步状态失败";
@@ -479,6 +490,8 @@ export default function AccountsPage() {
     try {
       const data = await runSync(direction);
       if (data.status) {
+        cachedSyncStatus = data.status;
+        hasLoadedSyncStatus = true;
         setSyncStatus(data.status);
       } else {
         await loadSync(true);
@@ -544,11 +557,13 @@ export default function AccountsPage() {
   return (
     <div className="hide-scrollbar min-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-5 sm:py-6 lg:h-full lg:min-h-0 lg:px-6 lg:py-7">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="text-xs font-semibold tracking-[0.18em] text-stone-500 uppercase">
-            Account Pool
+        <div className="flex items-center gap-4">
+          <div className="inline-flex size-12 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
+            <Shield className="size-5" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">号池管理</h1>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-stone-950">号池管理</h1>
+          </div>
         </div>
         <div className="relative self-start text-amber-950">
           <div
@@ -694,9 +709,13 @@ export default function AccountsPage() {
               </div>
             </div>
 
-            {!syncView.configured ? (
+            {isSyncLoading ? (
+              <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 text-sm leading-6 text-stone-500">
+                正在读取 CPA 同步状态...
+              </div>
+            ) : !syncView.configured ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-700">
-                后端还没有配置 CPA 同步。请在 `backend/data/config.toml` 中设置 `sync.enabled = true`、`sync.base_url`
+                后端还没有配置 CPA 同步。请在 `data/config.toml` 中设置 `sync.enabled = true`、`sync.base_url`
                 和 `sync.management_key`。
               </div>
             ) : (
