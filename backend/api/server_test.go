@@ -85,6 +85,53 @@ func TestConfiguredImageRoute(t *testing.T) {
 	}
 }
 
+func TestRequireImageAuthAcceptsSiteUserToken(t *testing.T) {
+	rootDir := t.TempDir()
+	cfg := config.New(rootDir)
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	server := NewServer(cfg, nil, nil)
+	_, token, err := server.siteUsers.login("demo", "demo123")
+	if err != nil {
+		t.Fatalf("site user login returned error: %v", err)
+	}
+
+	handler := server.requireImageAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+	req.Header.Set("X-Site-User-Token", token)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRequireImageAuthRejectsMissingCredentials(t *testing.T) {
+	rootDir := t.TempDir()
+	cfg := config.New(rootDir)
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	server := NewServer(cfg, nil, nil)
+
+	handler := server.requireImageAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestMigrateImageFilesSkipsNestedTargetDirectory(t *testing.T) {
 	rootDir := t.TempDir()
 	cfg := config.New(rootDir)

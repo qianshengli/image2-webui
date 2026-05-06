@@ -1599,6 +1599,10 @@ func (s *Server) requireImageAuth(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if _, ok := s.siteUserFromRequest(r); ok {
+			next.ServeHTTP(w, r)
+			return
+		}
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "authorization is invalid"})
 	})
 }

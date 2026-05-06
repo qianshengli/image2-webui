@@ -367,6 +367,9 @@ func (s *Server) handleDeleteSiteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) siteUserFromRequest(r *http.Request) (siteUser, bool) {
+	if s == nil || s.siteUsers == nil {
+		return siteUser{}, false
+	}
 	token := strings.TrimSpace(r.Header.Get("X-Site-User-Token"))
 	if token == "" {
 		return siteUser{}, false
