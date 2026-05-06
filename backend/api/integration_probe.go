@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/newapi"
-	"chatgpt2api/internal/outboundproxy"
-	"chatgpt2api/internal/sub2api"
+	"image2webui/internal/newapi"
+	"image2webui/internal/outboundproxy"
+	"image2webui/internal/sub2api"
 )
 
 type integrationTestRequest struct {
@@ -221,7 +221,7 @@ func (s *Server) testCPAConnection(r *http.Request, cfg integrationCPAConfig) (*
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(cfg.APIKey))
-	req.Header.Set("User-Agent", "chatgpt2api-studio integration test")
+	req.Header.Set("User-Agent", "image2-webui integration test")
 
 	startedAt := time.Now()
 	resp, err := client.Do(req)

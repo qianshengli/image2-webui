@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"chatgpt2api/internal/accounts"
+	"image2webui/internal/accounts"
 )
 
 const imageAccountPolicyHeader = "X-Studio-Account-Policy"

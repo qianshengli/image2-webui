@@ -93,13 +93,13 @@ export type ImageConversation = {
 export type ImageConversationStorageMode = "browser" | "server";
 
 const imageConversationStorage = localforage.createInstance({
-  name: "chatgpt2api-studio",
+  name: "image2-webui",
   storeName: "image_conversations",
 });
 
 const IMAGE_CONVERSATIONS_KEY = "items";
 const IMAGE_CONVERSATION_STORAGE_MODE_KEY =
-  "chatgpt2api:image-conversation-storage-mode";
+  "image2-webui:image-conversation-storage-mode";
 let cachedConversations: ImageConversation[] | null = null;
 let cachedConversationsStorageMode: ImageConversationStorageMode | null = null;
 let loadPromise: Promise<ImageConversation[]> | null = null;

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/imaging"
+	"image2webui/internal/accounts"
+	"image2webui/internal/imaging"
 )
 
 type imageGenerationRequest struct {
@@ -104,6 +104,9 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 	if prompt == "" {
 		return nil, newRequestError("prompt_required", "prompt is required")
 	}
+	if err := s.checkForbiddenPrompt(prompt); err != nil {
+		return nil, err
+	}
 	if req.N < 1 {
 		req.N = 1
 	}
@@ -168,6 +171,9 @@ func (s *Server) executeImageEdit(ctx context.Context, req imageEditRequest, r *
 	if prompt == "" {
 		return nil, newRequestError("prompt_required", "prompt is required")
 	}
+	if err := s.checkForbiddenPrompt(prompt); err != nil {
+		return nil, err
+	}
 	if len(req.Images) == 0 {
 		return nil, newRequestError("image_required", "at least one image is required")
 	}
@@ -221,6 +227,9 @@ func (s *Server) executeImageSelectionEdit(ctx context.Context, req imageSelecti
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
 		return nil, newRequestError("prompt_required", "prompt is required")
+	}
+	if err := s.checkForbiddenPrompt(prompt); err != nil {
+		return nil, err
 	}
 	if len(req.Mask) == 0 {
 		return nil, newRequestError("mask_required", "mask is required for selection edit")

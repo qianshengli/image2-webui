@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/configstore"
+	"image2webui/internal/config"
+	"image2webui/internal/configstore"
 )
 
 type configPayload struct {
@@ -17,6 +17,7 @@ type configPayload struct {
 		Version         string `json:"version"`
 		APIKey          string `json:"apiKey"`
 		AuthKey         string `json:"authKey"`
+		ForbiddenWords  string `json:"forbiddenWords"`
 		ImageFormat     string `json:"imageFormat"`
 		MaxUploadSizeMB int    `json:"maxUploadSizeMB"`
 	} `json:"app"`
@@ -142,6 +143,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"version":            payload.App.Version,
 			"api_key":            payload.App.APIKey,
 			"auth_key":           payload.App.AuthKey,
+			"forbidden_words":    payload.App.ForbiddenWords,
 			"image_format":       payload.App.ImageFormat,
 			"max_upload_size_mb": payload.App.MaxUploadSizeMB,
 		},
@@ -268,6 +270,7 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.App.Version = s.cfg.App.Version
 	payload.App.APIKey = cfg.App.APIKey
 	payload.App.AuthKey = cfg.App.AuthKey
+	payload.App.ForbiddenWords = cfg.App.ForbiddenWords
 	payload.App.ImageFormat = cfg.App.ImageFormat
 	payload.App.MaxUploadSizeMB = cfg.App.MaxUploadSizeMB
 

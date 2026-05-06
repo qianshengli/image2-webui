@@ -1,4 +1,4 @@
-module chatgpt2api
+module image2webui
 
 go 1.25.0
 

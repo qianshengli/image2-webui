@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"chatgpt2api/internal/accounts"
+	"image2webui/internal/accounts"
 )
 
 type imageAccountPolicyPayload struct {

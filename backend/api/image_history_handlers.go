@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/imagehistory"
+	"image2webui/internal/config"
+	"image2webui/internal/imagehistory"
 )
 
 func (s *Server) handleListImageConversations(w http.ResponseWriter, r *http.Request) {

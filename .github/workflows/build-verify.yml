@@ -50,16 +50,16 @@ jobs:
             local goos="$1"
             local goarch="$2"
             local ext="$3"
-            local package_name="ChatGptImageStudio-${VERSION}-${goos}-${goarch}"
+            local package_name="image2-webui-${VERSION}-${goos}-${goarch}"
             local stage_dir="release-work/${package_name}"
-            local binary_name="chatgpt-image-studio${ext}"
+            local binary_name="image2-webui${ext}"
 
             rm -rf "${stage_dir}"
             mkdir -p "${stage_dir}/data" "${stage_dir}/static"
 
             CGO_ENABLED=0 GOOS="${goos}" GOARCH="${goarch}" \
               go build -C backend -trimpath \
-              -ldflags="-s -w -X chatgpt2api/internal/buildinfo.Version=${VERSION} -X chatgpt2api/internal/buildinfo.Commit=${COMMIT} -X chatgpt2api/internal/buildinfo.BuildTime=${BUILD_TIME}" \
+              -ldflags="-s -w -X image2webui/internal/buildinfo.Version=${VERSION} -X image2webui/internal/buildinfo.Commit=${COMMIT} -X image2webui/internal/buildinfo.BuildTime=${BUILD_TIME}" \
               -o "../${stage_dir}/${binary_name}" .
 
             cp backend/internal/config/config.defaults.toml "${stage_dir}/data/config.example.toml"
@@ -106,7 +106,7 @@ jobs:
           file: ./Dockerfile
           load: true
           platforms: linux/amd64
-          tags: chatgpt-image-studio:verify-amd64
+          tags: image2-webui:verify-amd64
           build-args: |
             VERSION=build-verify
             COMMIT=${{ github.sha }}
@@ -115,9 +115,9 @@ jobs:
       - name: Smoke test amd64 image contents
         run: |
           set -euo pipefail
-          docker run --rm --entrypoint /bin/sh chatgpt-image-studio:verify-amd64 -c \
+          docker run --rm --entrypoint /bin/sh image2-webui:verify-amd64 -c \
             'uname -m && \
-             test -x /app/chatgpt2api-studio && \
+             test -x /app/image2-webui && \
              test -f /app/data/config.example.toml && \
              test -f /app/static/index.html'
 

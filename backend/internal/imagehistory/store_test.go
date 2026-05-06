@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"chatgpt2api/internal/config"
+	"image2webui/internal/config"
 )
 
 func newHistoryTestConfig(t *testing.T, backend string) *config.Config {
@@ -24,7 +24,7 @@ func newHistoryTestConfig(t *testing.T, backend string) *config.Config {
 	cfg.Storage.RedisAddr = "127.0.0.1:6379"
 	cfg.Storage.RedisPassword = "123456"
 	cfg.Storage.RedisDB = 0
-	cfg.Storage.RedisPrefix = "chatgpt2api:history:test:" + strings.ReplaceAll(root, "\\", ":")
+	cfg.Storage.RedisPrefix = "image2webui:history:test:" + strings.ReplaceAll(root, "\\", ":")
 	return cfg
 }
 

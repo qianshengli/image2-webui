@@ -49,9 +49,18 @@ request.interceptors.response.use(
     const status = error.response?.status;
     const shouldRedirect =
       (error.config as RequestConfig | undefined)?.redirectOnUnauthorized !== false;
-    if (status === 401 && shouldRedirect && typeof window !== "undefined") {
+    const isAdminRoute =
+      typeof window !== "undefined" &&
+      (window.location.pathname === "/admin" ||
+        window.location.pathname.startsWith("/admin/"));
+    if (
+      status === 401 &&
+      shouldRedirect &&
+      typeof window !== "undefined" &&
+      isAdminRoute
+    ) {
       await clearStoredAuthKey();
-      window.location.href = "/login";
+      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
     }
 
     const payload = error.response?.data;

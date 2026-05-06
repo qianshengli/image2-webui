@@ -156,7 +156,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
   const shouldShowGroups = imagePolicy.enabled && !isCollapsed;
 
   return (
-    <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+    <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
       <CardContent className="space-y-4 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -182,7 +182,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-xl border-stone-200 bg-white px-3 text-stone-700"
+              className="h-9 rounded-xl border-stone-200 bg-white dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] px-3 text-stone-700"
               onClick={() => setIsCollapsed((current) => !current)}
               disabled={!imagePolicy.enabled}
             >
@@ -193,7 +193,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4">
+          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]">
             <div className="mb-2 text-sm font-medium text-stone-800">是否启用</div>
             <div className="flex items-center gap-3">
               <Checkbox
@@ -205,7 +205,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
               <span className="text-sm text-stone-600">启用分组轮询</span>
             </div>
           </div>
-          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4">
+          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]">
             <div className="mb-2 text-sm font-medium text-stone-800">排序方式</div>
             <Select
               value={imagePolicy.sortMode}
@@ -214,7 +214,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
               }
               disabled={!imagePolicy.enabled}
             >
-              <SelectTrigger className="h-10 rounded-xl border-stone-200 bg-white">
+              <SelectTrigger className="h-10 rounded-xl border-stone-200 bg-white dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -224,7 +224,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4">
+          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]">
             <div className="mb-2 text-sm font-medium text-stone-800">每组账号数</div>
             <Input
               min={1}
@@ -235,10 +235,10 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                 updatePolicy({ groupSize: Number(event.target.value) || 1 })
               }
               disabled={!imagePolicy.enabled}
-              className="h-10 rounded-xl border-stone-200 bg-white"
+              className="h-10 rounded-xl border-stone-200 bg-white dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
             />
           </div>
-          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4">
+          <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]">
             <div className="mb-2 text-sm font-medium text-stone-800">保底百分比</div>
             <Input
               min={0}
@@ -249,7 +249,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                 updatePolicy({ reservePercent: Number(event.target.value) || 0 })
               }
               disabled={!imagePolicy.enabled}
-              className="h-10 rounded-xl border-stone-200 bg-white"
+              className="h-10 rounded-xl border-stone-200 bg-white dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
             />
           </div>
         </div>
@@ -257,7 +257,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
         {imagePolicy.enabled ? (
           <>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4">
+              <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]">
                 <div className="text-xs font-medium text-stone-400">已保存分组</div>
                 <div className="mt-2 text-base font-semibold tracking-tight text-stone-900">
                   {configuredGroupSummary}
@@ -266,19 +266,19 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                   这是账号池里持久化保存的原始勾选结果。
                 </p>
               </div>
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
-                <div className="text-xs font-medium text-emerald-700">当前实际发送分组</div>
-                <div className="mt-2 text-base font-semibold tracking-tight text-emerald-900">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/25">
+                <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300">当前实际发送分组</div>
+                <div className="mt-2 text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-200">
                   {effectiveGroupSummary}
                 </div>
-                <p className="mt-1 text-xs text-emerald-700">
+                <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
                   账号池增减后，这里会按当前可见分组临时修正，不会直接覆盖你保存的原始选择。
                 </p>
               </div>
             </div>
 
             {selectionAdjustedByPool ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
                 当前账号池数量变化后，部分已保存分组暂时超出范围。请求会按当前仍有效的分组发送；如果全部超出范围，会临时回退到当前存在的分组，避免直接失效。
               </div>
             ) : null}
@@ -286,7 +286,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
-                className="h-9 rounded-xl border-stone-200 bg-white text-stone-700"
+                className="h-9 rounded-xl border-stone-200 bg-white dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] text-stone-700"
                 onClick={() =>
                   updatePolicy({
                     enabledGroupIndexes: groups
@@ -300,7 +300,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
               </Button>
               <Button
                 variant="outline"
-                className="h-9 rounded-xl border-stone-200 bg-white text-stone-700"
+                className="h-9 rounded-xl border-stone-200 bg-white dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] text-stone-700"
                 onClick={() =>
                   updatePolicy({
                     enabledGroupIndexes: groups.map((group) => group.index),
@@ -312,7 +312,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
               </Button>
               <Button
                 variant="outline"
-                className="h-9 rounded-xl border-stone-200 bg-white text-stone-700"
+                className="h-9 rounded-xl border-stone-200 bg-white dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] text-stone-700"
                 onClick={() => updatePolicy({ enabledGroupIndexes: [] })}
               >
                 清空分组
@@ -322,7 +322,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
         ) : null}
 
         {isLoading ? (
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 text-sm text-stone-500">
+          <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 text-sm text-stone-500 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]">
             正在读取图片账号分组策略...
           </div>
         ) : null}
@@ -332,7 +332,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
             <div className="max-h-[320px] overflow-y-auto pr-1">
               <div className="space-y-2">
                 {groups.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+                  <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50 px-4 py-6 text-sm text-stone-500 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]">
                     先导入账号，这里才会生成分组预览。
                   </div>
                 ) : (

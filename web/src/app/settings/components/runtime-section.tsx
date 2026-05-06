@@ -32,7 +32,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
         }
         fullWidth
       >
-        <Input value={config.app.version} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+        <Input value={config.app.version} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]" />
       </Field>
       <Field
         label="监听地址"
@@ -59,7 +59,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
         <Input
           value={config.server.host}
           onChange={(event) => setSection("server", { ...config.server, host: event.target.value })}
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -97,7 +97,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               port: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -113,7 +113,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               maxImageConcurrency: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -129,7 +129,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               imageQueueLimit: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -145,7 +145,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               imageQueueTimeoutSeconds: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -161,7 +161,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               imageTaskQueueTtlSeconds: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -190,7 +190,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
           type="password"
           value={config.app.authKey}
           onChange={(event) => setSection("app", { ...config.app, authKey: event.target.value })}
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -218,7 +218,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
         <Input
           value={config.app.apiKey}
           onChange={(event) => setSection("app", { ...config.app, apiKey: event.target.value })}
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -250,7 +250,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
         <Input
           value={config.app.imageFormat}
           onChange={(event) => setSection("app", { ...config.app, imageFormat: event.target.value })}
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -284,7 +284,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               maxUploadSizeMB: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -318,7 +318,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               requestTimeout: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -352,7 +352,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               sseTimeout: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -386,7 +386,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               pollInterval: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -420,7 +420,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               pollMaxWait: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -454,7 +454,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               defaultQuota: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -488,7 +488,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               refreshWorkers: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <Field
@@ -504,7 +504,7 @@ export function RuntimeSection({ config, setSection }: RuntimeSectionProps) {
               imageQuotaRefreshTTLSeconds: Number(event.target.value || 0),
             })
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
       <ToggleField

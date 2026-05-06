@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"chatgpt2api/internal/config"
+	"image2webui/internal/config"
 )
 
 func TestResolveConfigSaveTargetUsesRequestedRedisValues(t *testing.T) {
@@ -77,7 +77,7 @@ func TestSaveConfigOverridesDoesNotRewriteBootstrapOnRedisFailure(t *testing.T) 
 		RedisAddr:     "127.0.0.1:1",
 		RedisPassword: "",
 		RedisDB:       0,
-		RedisPrefix:   "chatgpt2api:test:broken",
+		RedisPrefix:   "image2webui:test:broken",
 	})
 	if err == nil {
 		t.Fatal("expected Redis save to fail")

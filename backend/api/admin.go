@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/token"
+	"image2webui/internal/config"
+	"image2webui/internal/token"
 )
 
 func handleTokens() http.HandlerFunc {

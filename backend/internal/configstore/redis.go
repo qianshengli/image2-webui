@@ -22,7 +22,7 @@ func NewRedis(addr, password string, db int, prefix string) *RedisStore {
 			Password: password,
 			DB:       db,
 		}),
-		prefix: firstNonEmpty(prefix, "chatgpt2api:studio"),
+		prefix: firstNonEmpty(prefix, "image2-webui"),
 	}
 }
 

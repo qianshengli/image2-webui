@@ -18,8 +18,8 @@ Thumbs.db
 *.bak
 *.iml
 /dist/
-/chatgpt2api-studio
-/chatgpt2api-studio.exe
+/image2-webui
+/image2-webui.exe
 
 # Backend build/runtime
 /backend/*.exe

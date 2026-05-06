@@ -2,13 +2,12 @@
 
 import localforage from "localforage";
 
-export const AUTH_KEY_STORAGE_KEY = "chatgpt2api_auth_key";
+export const AUTH_KEY_STORAGE_KEY = "image2-webui:auth-key";
 
 const authStorage = localforage.createInstance({
-  name: "chatgpt2api",
+  name: "image2-webui",
   storeName: "auth",
 });
-
 export async function getStoredAuthKey() {
   if (typeof window === "undefined") {
     return "";

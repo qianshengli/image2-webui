@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo, useState } from "react";
 import { History, LoaderCircle, MessageSquarePlus, Trash2 } from "lucide-react";
 
 import { AppImage as Image } from "@/components/app-image";
@@ -55,10 +55,44 @@ export const HistorySidebar = memo(
     onDeleteConversation,
     standalone = false,
   }: HistorySidebarProps) {
+    const [searchKeyword, setSearchKeyword] = useState("");
+    const filteredConversations = useMemo(() => {
+      const keyword = searchKeyword.trim().toLowerCase();
+      if (!keyword) {
+        return conversations;
+      }
+      return conversations.filter((item) => {
+        const title = String(item.title || "").toLowerCase();
+        const prompt = String(item.prompt || "").toLowerCase();
+        return title.includes(keyword) || prompt.includes(keyword);
+      });
+    }, [conversations, searchKeyword]);
+    const groupedConversations = useMemo(() => {
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000;
+      const sections: Array<{ key: string; label: string; items: ImageConversation[] }> = [
+        { key: "today", label: "今天", items: [] },
+        { key: "week", label: "近 7 天", items: [] },
+        { key: "older", label: "更早", items: [] },
+      ];
+      for (const item of filteredConversations) {
+        const timestamp = new Date(item.createdAt).getTime();
+        const diff = Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : now - timestamp;
+        if (diff <= oneDay) {
+          sections[0].items.push(item);
+        } else if (diff <= oneDay * 7) {
+          sections[1].items.push(item);
+        } else {
+          sections[2].items.push(item);
+        }
+      }
+      return sections.filter((section) => section.items.length > 0);
+    }, [filteredConversations]);
+
     return (
       <aside
         className={cn(
-          "overflow-hidden rounded-[28px] border border-stone-200 bg-[#f8f8f7] shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:shadow-[0_20px_50px_-32px_rgba(0,0,0,0.7)]",
+          "overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:shadow-[0_20px_50px_-32px_rgba(0,0,0,0.7)]",
           standalone
             ? "min-h-[420px]"
             : "order-2 max-h-[36vh] lg:order-none lg:max-h-none lg:min-h-0",
@@ -78,7 +112,7 @@ export const HistorySidebar = memo(
             </div>
             <div className="mt-4 flex items-center gap-2">
               <Button
-                className="h-11 flex-1 rounded-2xl bg-stone-950 text-white hover:bg-stone-800 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)]"
+                className="h-11 flex-1 rounded-md bg-stone-950 text-white hover:bg-stone-800 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)]"
                 onClick={onCreateDraft}
               >
                 <MessageSquarePlus className="size-4" />
@@ -86,7 +120,7 @@ export const HistorySidebar = memo(
               </Button>
               <Button
                 variant="outline"
-                className="h-11 rounded-2xl border-stone-200 bg-white px-3 text-stone-600 hover:bg-stone-50 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:hover:bg-[var(--studio-panel-muted)]"
+                className="h-11 rounded-md border-stone-200 bg-white px-3 text-stone-600 hover:bg-stone-50 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:hover:bg-[var(--studio-panel-muted)]"
                 onClick={() => void onClearHistory()}
                 disabled={conversations.length === 0 || hasActiveTasks}
                 title={
@@ -96,6 +130,12 @@ export const HistorySidebar = memo(
                 <Trash2 className="size-4" />
               </Button>
             </div>
+            <input
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
+              placeholder="搜索标题或提示词"
+              className="mt-3 h-10 w-full rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-700 outline-none ring-0 placeholder:text-stone-400 focus:border-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)]"
+            />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
@@ -104,13 +144,20 @@ export const HistorySidebar = memo(
                 <LoaderCircle className="size-4 animate-spin" />
                 正在读取会话记录
               </div>
-            ) : conversations.length === 0 ? (
+            ) : filteredConversations.length === 0 ? (
               <div className="px-3 py-4 text-sm leading-6 text-stone-500">
-                还没有历史记录。创建第一条图片任务后，会在这里保留缩略图和提示词摘要。
+                {conversations.length === 0
+                  ? "还没有历史记录。创建第一条图片任务后，会在这里保留缩略图和提示词摘要。"
+                  : "没有匹配的会话，试试其他关键词。"}
               </div>
             ) : (
-              <div className="space-y-2">
-                {conversations.map((conversation) => {
+              <div className="space-y-3">
+                {groupedConversations.map((group) => (
+                  <div key={group.key} className="space-y-2">
+                    <div className="px-2 text-[11px] font-semibold tracking-wide text-stone-400">
+                      {group.label}
+                    </div>
+                    {group.items.map((conversation) => {
                   const active = conversation.id === selectedConversationId;
                   const isDeletingDisabled = activeConversationIds.has(
                     conversation.id,
@@ -120,9 +167,9 @@ export const HistorySidebar = memo(
                   return (
                     <div
                       key={conversation.id}
-                        className={cn(
-                          "group rounded-[22px] border p-2 transition",
-                          active
+                      className={cn(
+                        "group rounded-lg border p-2 transition",
+                        active
                           ? "border-stone-200 bg-white shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
                           : "border-transparent bg-transparent hover:border-stone-200/80 hover:bg-white/70 dark:hover:border-[var(--studio-border)] dark:hover:bg-[var(--studio-panel-soft)]",
                       )}
@@ -133,7 +180,7 @@ export const HistorySidebar = memo(
                           onClick={() => onFocusConversation(conversation.id)}
                           className="flex min-w-0 flex-1 items-center gap-3 text-left"
                         >
-                          <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-stone-100">
+                          <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-stone-100">
                             {previewSrc ? (
                               <Image
                                 src={previewSrc}
@@ -184,6 +231,8 @@ export const HistorySidebar = memo(
                     </div>
                   );
                 })}
+                  </div>
+                ))}
               </div>
             )}
           </div>

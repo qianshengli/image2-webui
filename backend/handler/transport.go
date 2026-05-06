@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"chatgpt2api/internal/outboundproxy"
+	"image2webui/internal/outboundproxy"
 
 	utls "github.com/refraction-networking/utls"
 	"golang.org/x/net/http2"

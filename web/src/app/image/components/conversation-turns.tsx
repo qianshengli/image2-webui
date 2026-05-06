@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo, useState } from "react";
 import Zoom from "react-medium-image-zoom";
 import {
   Brush,
@@ -109,6 +109,19 @@ async function copyPromptToClipboard(prompt: string) {
   }
 }
 
+async function downloadImageFromDataUrl(dataUrl: string, filename: string) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(blobUrl);
+}
+
 type ConversationTurnsProps = {
   conversationId: string;
   turns: ImageConversationTurn[];
@@ -160,8 +173,79 @@ export const ConversationTurns = memo(function ConversationTurns({
   onRetryTurn,
   onCancelTurn,
 }: ConversationTurnsProps) {
+  const [resultViewMode, setResultViewMode] = useState<"focus" | "grid">("focus");
+  const allPrompts = useMemo(
+    () => turns.map((turn) => turn.prompt?.trim() || "").filter(Boolean).join("\n\n"),
+    [turns],
+  );
+  const downloadableImages = useMemo(() => {
+    return turns.flatMap((turn) =>
+      turn.images
+        .map((image, index) => {
+          const dataUrl = buildImageDataUrl(image);
+          if (!dataUrl || image.status !== "success") {
+            return null;
+          }
+          return {
+            dataUrl,
+            filename: buildDownloadName(turn.createdAt, turn.id, index),
+          };
+        })
+        .filter(Boolean) as Array<{ dataUrl: string; filename: string }>,
+    );
+  }, [turns]);
+
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 px-4 pt-0 pb-8 sm:px-6 sm:py-8">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setResultViewMode("focus")}
+          className={cn(
+            "rounded-md border px-3 py-1.5 text-xs font-medium transition",
+            resultViewMode === "focus"
+              ? "border-stone-900 bg-stone-900 text-white"
+              : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50",
+          )}
+        >
+          聚焦视图
+        </button>
+        <button
+          type="button"
+          onClick={() => setResultViewMode("grid")}
+          className={cn(
+            "rounded-md border px-3 py-1.5 text-xs font-medium transition",
+            resultViewMode === "grid"
+              ? "border-stone-900 bg-stone-900 text-white"
+              : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50",
+          )}
+        >
+          网格视图
+        </button>
+        <button
+          type="button"
+          onClick={() => void copyPromptToClipboard(allPrompts)}
+          className="rounded-md border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-50"
+        >
+          复制全部提示词
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            if (downloadableImages.length === 0) {
+              toast.warning("当前没有可下载的图片");
+              return;
+            }
+            for (const item of downloadableImages) {
+              await downloadImageFromDataUrl(item.dataUrl, item.filename);
+            }
+            toast.success(`已开始下载 ${downloadableImages.length} 张图片`);
+          }}
+          className="rounded-md border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-50"
+        >
+          批量下载
+        </button>
+      </div>
       {turns.map((turn) => {
         const turnProcessing = Boolean(
           activeRequest &&
@@ -239,7 +323,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                   </div>
                 ) : null}
                 <div className="group flex max-w-full flex-col items-start gap-1.5">
-                  <div className="min-w-0 whitespace-pre-wrap break-words rounded-[28px] bg-[#f2f2f1] px-5 py-4 text-[15px] leading-7 text-stone-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+                  <div className="min-w-0 whitespace-pre-wrap break-words rounded-lg bg-[#f2f2f1] px-5 py-4 text-[15px] leading-7 text-stone-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
                     {turn.prompt || "无额外提示词"}
                   </div>
                   <button
@@ -247,7 +331,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                     onClick={() =>
                       void copyPromptToClipboard(turn.prompt || "")
                     }
-                    className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-500 opacity-0 shadow-sm transition hover:bg-stone-100 hover:text-stone-900 focus-visible:opacity-100 focus-visible:outline-none group-hover:opacity-100"
+                    className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-500 opacity-0 shadow-sm transition hover:bg-stone-100 hover:text-stone-900 focus-visible:opacity-100 focus-visible:outline-none group-hover:opacity-100"
                     title="复制提示词"
                     aria-label="复制提示词"
                   >
@@ -265,7 +349,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                 </span>
                 <div>
                   <div className="text-sm font-semibold tracking-tight text-stone-900">
-                    ChatGpt Image Studio
+                    image2 webui
                   </div>
                 </div>
               </div>
@@ -324,9 +408,11 @@ export const ConversationTurns = memo(function ConversationTurns({
                 <div
                   className={cn(
                     "grid gap-4",
-                    turn.images.length === 1
-                      ? "grid-cols-1"
-                      : "grid-cols-1 lg:grid-cols-2",
+                    resultViewMode === "grid"
+                      ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+                      : turn.images.length === 1
+                        ? "grid-cols-1"
+                        : "grid-cols-1 lg:grid-cols-2",
                   )}
                 >
                   {turn.images.map((image, index) => {
@@ -341,7 +427,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                       <div
                         key={image.id}
                         className={cn(
-                          "overflow-hidden rounded-[22px] border border-stone-200 bg-white shadow-sm",
+                          "overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm",
                           image.status === "success" &&
                             "w-fit max-w-[75%] justify-self-start",
                           image.status !== "success" &&

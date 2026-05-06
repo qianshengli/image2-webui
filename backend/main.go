@@ -15,12 +15,12 @@ import (
 	"syscall"
 	"time"
 
-	"chatgpt2api/api"
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/buildinfo"
-	"chatgpt2api/internal/cliproxy"
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/configstore"
+	"image2webui/api"
+	"image2webui/internal/accounts"
+	"image2webui/internal/buildinfo"
+	"image2webui/internal/cliproxy"
+	"image2webui/internal/config"
+	"image2webui/internal/configstore"
 )
 
 func main() {
@@ -101,7 +101,7 @@ func main() {
 	if clearErr := clearStartupError(paths); clearErr != nil {
 		logger.Warn("clear startup error log", slog.Any("error", clearErr))
 	}
-	logger.Info("chatgpt2api-studio listening", slog.String("addr", addr))
+	logger.Info("image2-webui listening", slog.String("addr", addr))
 
 	errCh := make(chan error, 1)
 	go func() {

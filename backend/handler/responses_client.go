@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/imaging"
+	"image2webui/internal/imaging"
 	"github.com/google/uuid"
 )
 

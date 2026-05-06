@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"chatgpt2api/internal/storage"
+	"image2webui/internal/storage"
 )
 
 const (

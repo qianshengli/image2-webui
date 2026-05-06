@@ -170,7 +170,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           <Button
             type="button"
             variant="outline"
-            className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none"
+            className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)]"
             onClick={() => void handleTestNewAPI()}
             disabled={testingSource === "newapi"}
           >
@@ -186,7 +186,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           <Input
             value={config.newapi.baseUrl}
             onChange={(event) => setSection("newapi", { ...config.newapi, baseUrl: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -200,7 +200,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
                 requestTimeout: Number(event.target.value || 0),
               })
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -211,7 +211,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           <Input
             value={config.newapi.username}
             onChange={(event) => setSection("newapi", { ...config.newapi, username: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -223,7 +223,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             type="password"
             value={config.newapi.password}
             onChange={(event) => setSection("newapi", { ...config.newapi, password: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -249,7 +249,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             type="password"
             value={config.newapi.accessToken}
             onChange={(event) => setSection("newapi", { ...config.newapi, accessToken: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -266,7 +266,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
                 userId: Number(event.target.value || 0),
               })
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -278,7 +278,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           <Input
             value={config.newapi.sessionCookie}
             onChange={(event) => setSection("newapi", { ...config.newapi, sessionCookie: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
       </ConfigSection>
@@ -291,7 +291,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             <Button
               type="button"
               variant="outline"
-              className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none"
+              className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)]"
               onClick={() => void handleTestSub2API()}
               disabled={testingSource === "sub2api"}
             >
@@ -301,7 +301,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             <Button
               type="button"
               variant="outline"
-              className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none"
+              className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)]"
               onClick={() => void handleLoadSub2APIGroups()}
               disabled={isLoadingSub2APIGroups}
             >
@@ -318,7 +318,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           <Input
             value={config.sub2api.baseUrl}
             onChange={(event) => setSection("sub2api", { ...config.sub2api, baseUrl: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -329,7 +329,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           <Input
             value={config.sub2api.email}
             onChange={(event) => setSection("sub2api", { ...config.sub2api, email: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -341,7 +341,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             type="password"
             value={config.sub2api.password}
             onChange={(event) => setSection("sub2api", { ...config.sub2api, password: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -353,7 +353,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             type="password"
             value={config.sub2api.apiKey}
             onChange={(event) => setSection("sub2api", { ...config.sub2api, apiKey: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
 
@@ -389,7 +389,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             }
             disabled={isLoadingSub2APIGroups || sub2apiGroupOptions.length === 0}
           >
-            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none">
+            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
               <SelectValue placeholder="先点击“拉取分组”获取可选项" />
             </SelectTrigger>
             <SelectContent>
@@ -413,7 +413,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
                 requestTimeout: Number(event.target.value || 0),
               })
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
       </ConfigSection>
@@ -448,7 +448,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             value={config.storage.backend}
             onValueChange={(value) => setSection("storage", { ...config.storage, backend: value })}
           >
-            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none">
+            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -463,7 +463,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             value={config.storage.configBackend === "redis" ? "redis" : "file"}
             onValueChange={(value) => setSection("storage", { ...config.storage, configBackend: value })}
           >
-            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none">
+            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -487,7 +487,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
               })
             }
           >
-            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none">
+            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -515,7 +515,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
               })
             }
           >
-            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none">
+            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -529,7 +529,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
             <Input
               value={config.storage.sqlitePath}
               onChange={(event) => setSection("storage", { ...config.storage, sqlitePath: event.target.value })}
-              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
             />
           </Field>
         ) : null}
@@ -548,7 +548,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
               <Input
                 value={config.storage.redisAddr}
                 onChange={(event) => setSection("storage", { ...config.storage, redisAddr: event.target.value })}
-                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
               />
             </Field>
             <Field label="Redis 密码" hint="Redis 无密码可留空。">
@@ -556,7 +556,7 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
                 type="password"
                 value={config.storage.redisPassword}
                 onChange={(event) => setSection("storage", { ...config.storage, redisPassword: event.target.value })}
-                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
               />
             </Field>
             <Field label="Redis DB" hint="默认 0。">
@@ -569,14 +569,14 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
                     redisDb: Number(event.target.value || 0),
                   })
                 }
-                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
               />
             </Field>
             <Field label="Redis Key 前缀" hint="避免和其他业务共享 Redis 时键名冲突。">
               <Input
                 value={config.storage.redisPrefix}
                 onChange={(event) => setSection("storage", { ...config.storage, redisPrefix: event.target.value })}
-                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
               />
             </Field>
           </>

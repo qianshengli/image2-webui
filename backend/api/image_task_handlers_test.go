@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"chatgpt2api/handler"
+	"image2webui/handler"
 )
 
 func TestCreateImageTaskRunsToSuccess(t *testing.T) {
@@ -75,6 +75,39 @@ func TestCreateImageTaskRunsToSuccess(t *testing.T) {
 	}
 	if recorder.officialCalls != 1 {
 		t.Fatalf("officialCalls = %d, want 1", recorder.officialCalls)
+	}
+}
+
+func TestCreateImageTaskRejectsForbiddenPrompt(t *testing.T) {
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Free",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+	server.cfg.App.ForbiddenWords = "违禁词,nsfw"
+
+	req := httptest.NewRequest(http.MethodPost, "/api/image/tasks", strings.NewReader(`{
+		"conversationId":"conv-task-forbidden-1",
+		"turnId":"turn-task-forbidden-1",
+		"mode":"generate",
+		"prompt":"请生成违禁词海报",
+		"model":"gpt-image-2",
+		"count":1
+	}`))
+	req.Header.Set("Authorization", "Bearer "+server.cfg.App.AuthKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "forbidden_prompt") {
+		t.Fatalf("body = %s, want forbidden_prompt", rec.Body.String())
 	}
 }
 

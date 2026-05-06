@@ -245,7 +245,7 @@ export function ImageModeSection({
             <Input
               value={config.chatgpt.model}
               onChange={(event) => setSection("chatgpt", { ...config.chatgpt, model: event.target.value })}
-              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
             />
           </Field>
         ) : (
@@ -275,7 +275,7 @@ export function ImageModeSection({
             <Input
               value="gpt-image-2"
               readOnly
-              className="h-11 rounded-2xl border-stone-200 bg-stone-50 text-stone-500 shadow-none"
+              className="h-11 rounded-2xl border-stone-200 bg-stone-50 text-stone-500 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)] dark:text-[var(--studio-text-muted)]"
             />
           </Field>
         )}
@@ -514,7 +514,7 @@ export function ImageModeSection({
           <Button
             type="button"
             variant="outline"
-            className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none"
+            className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)]"
             onClick={() => void handleTestCPA()}
             disabled={isTestingCPA}
           >
@@ -553,7 +553,7 @@ export function ImageModeSection({
           <Input
             value={effectiveCPAImageBaseUrl || "未配置"}
             readOnly
-            className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]"
           />
         </Field>
         <Field
@@ -582,7 +582,7 @@ export function ImageModeSection({
           <Input
             value={syncManagementKeyStatus}
             readOnly
-            className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]"
           />
         </Field>
         <Field
@@ -615,7 +615,7 @@ export function ImageModeSection({
             value={config.cpa.baseUrl}
             onChange={(event) => setSection("cpa", { ...config.cpa, baseUrl: event.target.value })}
             placeholder={config.sync.baseUrl || "http://127.0.0.1:8317"}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <Field
@@ -648,7 +648,7 @@ export function ImageModeSection({
             type="password"
             value={config.cpa.apiKey}
             onChange={(event) => setSection("cpa", { ...config.cpa, apiKey: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <Field
@@ -682,7 +682,7 @@ export function ImageModeSection({
                 requestTimeout: Number(event.target.value || 0),
               })
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <Field
@@ -757,7 +757,7 @@ export function ImageModeSection({
           <Input
             value={config.sync.baseUrl}
             onChange={(event) => setSection("sync", { ...config.sync, baseUrl: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <Field
@@ -786,7 +786,7 @@ export function ImageModeSection({
             type="password"
             value={config.sync.managementKey}
             onChange={(event) => setSection("sync", { ...config.sync, managementKey: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <Field
@@ -816,7 +816,7 @@ export function ImageModeSection({
                 requestTimeout: Number(event.target.value || 0),
               })
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <Field
@@ -850,7 +850,7 @@ export function ImageModeSection({
                 concurrency: Number(event.target.value || 0),
               })
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <Field
@@ -878,7 +878,7 @@ export function ImageModeSection({
           <Input
             value={config.sync.providerType}
             onChange={(event) => setSection("sync", { ...config.sync, providerType: event.target.value })}
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
         <ToggleField

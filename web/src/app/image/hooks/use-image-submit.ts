@@ -106,6 +106,14 @@ function normalizeImageQuality(value: string | undefined, fallback: ImageQuality
   return fallback;
 }
 
+function normalizeSubmitErrorMessage(error: unknown, fallback: string) {
+  const rawMessage = error instanceof Error ? error.message : fallback;
+  if (/authorization is invalid/i.test(rawMessage)) {
+    return "当前为免登录工作台，请先在管理页面配置有效密钥后再生成图片";
+  }
+  return rawMessage;
+}
+
 export function useImageSubmit({
   mode,
   imagePrompt,
@@ -254,8 +262,7 @@ export function useImageSubmit({
         }));
         toast.success("图片编辑任务已加入队列");
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "提交编辑失败";
+        const message = normalizeSubmitErrorMessage(error, "提交编辑失败");
         await updateConversation(conversationId, (current) => ({
           ...(current ?? buildConversationBase(conversationId, draftTurn)),
           turns: (current?.turns ?? [draftTurn]).map((turn) =>
@@ -409,8 +416,7 @@ export function useImageSubmit({
           isSingleImageRetry ? "失败图片已重新加入队列" : "任务已重新加入队列",
         );
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "提交任务失败";
+        const message = normalizeSubmitErrorMessage(error, "提交任务失败");
         await updateConversation(conversationId, (current) => ({
           ...(current ?? buildConversationBase(conversationId, draftTurn)),
           turns: (current?.turns ?? [draftTurn]).map((item) =>
@@ -456,20 +462,20 @@ export function useImageSubmit({
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitDispatchingRef.current) {
-      return;
+      return false;
     }
     const prompt = imagePrompt.trim();
     if (mode === "generate" && !prompt) {
       toast.error("请输入提示词");
-      return;
+      return false;
     }
     if (mode === "edit" && imageSources.length === 0) {
       toast.error("编辑模式至少需要一张源图");
-      return;
+      return false;
     }
     if (mode === "edit" && !prompt) {
       toast.error("编辑模式需要提示词");
-      return;
+      return false;
     }
     isSubmitDispatchingRef.current = true;
 
@@ -539,9 +545,9 @@ export function useImageSubmit({
       }));
       resetComposer(mode === "generate" ? "generate" : "edit");
       toast.success("图片任务已加入队列");
+      return true;
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "提交任务失败";
+      const message = normalizeSubmitErrorMessage(error, "提交任务失败");
       await updateConversation(conversationId, (current) => ({
         ...(current ?? buildConversationBase(conversationId, draftTurn)),
         turns: (current?.turns ?? [draftTurn]).map((turn) =>
@@ -560,6 +566,7 @@ export function useImageSubmit({
         ),
       }));
       toast.error(message);
+      return false;
     } finally {
       isSubmitDispatchingRef.current = false;
     }

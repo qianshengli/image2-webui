@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sparkles, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
@@ -19,20 +19,15 @@ export function ThemeToggleButton({
     light: {
       icon: Sun,
       current: "浅色主题",
-      next: "浅灰主题",
-    },
-    graphite: {
-      icon: Moon,
-      current: "浅灰主题",
       next: "深黑主题",
     },
     dark: {
-      icon: Sparkles,
+      icon: Moon,
       current: "深黑主题",
       next: "浅色主题",
     },
   } as const;
-  const currentMode = modeMeta[themeMode];
+  const currentMode = themeMode === "dark" ? modeMeta.dark : modeMeta.light;
   const Icon = currentMode.icon;
   const label = `当前${currentMode.current}，点击切换到${currentMode.next}`;
 

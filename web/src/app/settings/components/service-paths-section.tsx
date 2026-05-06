@@ -55,7 +55,7 @@ export function ServicePathsSection({
                 title: "常见值",
                 body: (
                   <>
-                    <code>static</code>，或者绝对路径如 <code>D:\\ChatGpt-Image-Studio\\static</code>。
+                    <code>static</code>，或者绝对路径如 <code>D:\\image2-webui\\static</code>。
                   </>
                 ),
               },
@@ -79,7 +79,7 @@ export function ServicePathsSection({
               server: { ...current.server, staticDir: event.target.value },
             }))
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
 
@@ -101,7 +101,7 @@ export function ServicePathsSection({
           />
         }
       >
-        <Input value={resolvedStaticDir} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+        <Input value={resolvedStaticDir} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]" />
       </Field>
 
       <ToggleField
@@ -169,12 +169,12 @@ export function ServicePathsSection({
                 proxy: { ...current.proxy, url: event.target.value },
               }))
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
           <Button
             type="button"
             variant="outline"
-            className="h-11 shrink-0 rounded-2xl border-stone-200 bg-white px-4 text-stone-700 shadow-none"
+            className="h-11 shrink-0 rounded-2xl border-stone-200 bg-white px-4 text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)]"
             onClick={() => void handleTestProxy()}
             disabled={isTestingProxy}
           >
@@ -210,7 +210,7 @@ export function ServicePathsSection({
               proxy: { ...current.proxy, mode: event.target.value },
             }))
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
 
@@ -279,7 +279,7 @@ export function ServicePathsSection({
               storage: { ...current.storage, authDir: event.target.value },
             }))
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
 
@@ -318,7 +318,7 @@ export function ServicePathsSection({
               storage: { ...current.storage, stateFile: event.target.value },
             }))
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
 
@@ -357,7 +357,7 @@ export function ServicePathsSection({
               storage: { ...current.storage, syncStateDir: event.target.value },
             }))
           }
-          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
         />
       </Field>
 
@@ -397,7 +397,7 @@ export function ServicePathsSection({
                 storage: { ...current.storage, imageDir: event.target.value },
               }))
             }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
           />
         </Field>
       ) : null}
@@ -421,7 +421,7 @@ export function ServicePathsSection({
         }
         fullWidth
       >
-        <Input value={config.paths.root} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+        <Input value={config.paths.root} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]" />
       </Field>
 
       <Field
@@ -443,7 +443,7 @@ export function ServicePathsSection({
         }
         fullWidth
       >
-        <Input value={config.paths.defaults} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+        <Input value={config.paths.defaults} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]" />
       </Field>
 
       <Field
@@ -465,7 +465,7 @@ export function ServicePathsSection({
         }
         fullWidth
       >
-        <Input value={config.paths.override} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+        <Input value={config.paths.override} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]" />
       </Field>
 
       <Field
@@ -487,7 +487,7 @@ export function ServicePathsSection({
         }
         fullWidth
       >
-        <Input value={startupErrorPath} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none" />
+        <Input value={startupErrorPath} readOnly className="h-11 rounded-2xl border-stone-200 bg-stone-50 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]" />
       </Field>
     </ConfigSection>
   );

@@ -3,12 +3,12 @@ package api
 import (
 	"testing"
 
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/newapi"
+	"image2webui/internal/accounts"
+	"image2webui/internal/newapi"
 )
 
 func TestIdentityKeyFromNewAPIRemark(t *testing.T) {
-	got := identityKeyFromNewAPIRemark("chatgpt-image-studio::codex::demo@example.com")
+	got := identityKeyFromNewAPIRemark("image2-webui::codex::demo@example.com")
 	if got != "codex::demo@example.com" {
 		t.Fatalf("identityKeyFromNewAPIRemark() = %q", got)
 	}
@@ -17,7 +17,7 @@ func TestIdentityKeyFromNewAPIRemark(t *testing.T) {
 func TestResolveNewAPIIdentityKeyUsesRemarkFallback(t *testing.T) {
 	info := describeNewAPIRemoteChannel(newapi.Channel{
 		Name:   "demo@example.com",
-		Remark: "chatgpt-image-studio::codex::demo@example.com",
+		Remark: "image2-webui::codex::demo@example.com",
 	})
 	if info.pullable {
 		t.Fatal("remark fallback should not be treated as pullable auth data")

@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"chatgpt2api/handler"
-	"chatgpt2api/internal/imagehistory"
+	"image2webui/handler"
+	"image2webui/internal/imagehistory"
 )
 
 // buildImageResponse converts ImageResults to the OpenAI-compatible response format.

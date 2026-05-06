@@ -9,15 +9,16 @@ import (
 	"sync"
 	"time"
 
-	"chatgpt2api/internal/outboundproxy"
+	"image2webui/internal/outboundproxy"
 
 	"github.com/BurntSushi/toml"
 )
 
 const (
-	exampleConfigFile = "config.example.toml"
-	userConfigFile    = "config.toml"
-	dataDirName       = "data"
+	exampleConfigFile           = "config.example.toml"
+	userConfigFile              = "config.toml"
+	dataDirName                 = "data"
+	defaultForbiddenWordsPreset = "minor,underage,child sexual,sexual content,nudity,explicit sex,rape,incest,bestiality,non-consensual,intimate image,deepfake,public figure,celebrity face,impersonation,fraud,hate,terrorism,extremism,self-harm,suicide,bomb,weapon tutorial,graphic violence,gore"
 )
 
 var (
@@ -36,6 +37,7 @@ type AppConfig struct {
 	Version         string `toml:"version"`
 	APIKey          string `toml:"api_key"`
 	AuthKey         string `toml:"auth_key"`
+	ForbiddenWords  string `toml:"forbidden_words"`
 	ImageFormat     string `toml:"image_format"`
 	MaxUploadSizeMB int    `toml:"max_upload_size_mb"`
 }
@@ -531,6 +533,38 @@ func (c *Config) ImageQuotaRefreshTTL() time.Duration {
 	return time.Duration(ttlSeconds) * time.Second
 }
 
+func (c *Config) ForbiddenPromptWords() []string {
+	c.mu.RLock()
+	raw := c.App.ForbiddenWords
+	c.mu.RUnlock()
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		switch r {
+		case ',', '，', '\n', '\r', ';', '；', '|':
+			return true
+		default:
+			return false
+		}
+	})
+	result := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	for _, part := range parts {
+		word := strings.ToLower(strings.TrimSpace(part))
+		if word == "" {
+			continue
+		}
+		if _, ok := seen[word]; ok {
+			continue
+		}
+		seen[word] = struct{}{}
+		result = append(result, word)
+	}
+	return result
+}
+
+func DefaultForbiddenWordsPreset() string {
+	return defaultForbiddenWordsPreset
+}
+
 func (c *Config) proxyURLLocked(forSync bool) string {
 	if !c.Proxy.Enabled {
 		return ""
@@ -566,6 +600,7 @@ func (c *Config) validate() error {
 	} else {
 		c.ChatGPT.ImageMode = normalized
 	}
+	c.App.ForbiddenWords = strings.TrimSpace(c.App.ForbiddenWords)
 
 	if normalized, ok := normalizeImageRoute(c.ChatGPT.FreeImageRoute); !ok {
 		return fmt.Errorf("invalid chatgpt.free_image_route %q: only legacy or responses are supported", strings.TrimSpace(c.ChatGPT.FreeImageRoute))

@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"chatgpt2api/handler"
-	"chatgpt2api/internal/imagehistory"
+	"image2webui/handler"
+	"image2webui/internal/imagehistory"
 )
 
 const imageTaskFakeHost = "workspace.local"

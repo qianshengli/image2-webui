@@ -269,6 +269,7 @@ export type ConfigPayload = {
     version: string;
     apiKey: string;
     authKey: string;
+    forbiddenWords: string;
     imageFormat: string;
     maxUploadSizeMB: number;
   };
@@ -363,6 +364,10 @@ export type ConfigPayload = {
   };
 };
 
+export type ForbiddenWordsPresetResponse = {
+  preset: string;
+};
+
 export type RequestLogItem = {
   id: string;
   startedAt: string;
@@ -420,6 +425,25 @@ export type StartupCheckResponse = {
   failCount: number;
   checks: StartupCheckItem[];
   summaryText: string;
+};
+
+export type SiteUser = {
+  id: string;
+  username: string;
+  total_quota: number;
+  used_quota: number;
+  disabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteUserLoginResponse = {
+  token: string;
+  user: SiteUser;
+};
+
+export type SiteUserListResponse = {
+  items: SiteUser[];
 };
 
 export type RuntimeStatusResponse = {
@@ -584,6 +608,70 @@ export async function login(authKey: string) {
   });
 }
 
+export async function loginSiteUser(username: string, password: string) {
+  return httpRequest<SiteUserLoginResponse>("/site-users/login", {
+    method: "POST",
+    body: { username, password },
+    redirectOnUnauthorized: false,
+  });
+}
+
+export async function fetchSiteUserMe(siteUserToken: string) {
+  return httpRequest<{ user: SiteUser }>("/site-users/me", {
+    method: "GET",
+    headers: {
+      "X-Site-User-Token": siteUserToken,
+    },
+    redirectOnUnauthorized: false,
+  });
+}
+
+export async function consumeSiteUserQuota(siteUserToken: string, amount: number) {
+  return httpRequest<{ user: SiteUser }>("/site-users/quota/consume", {
+    method: "POST",
+    body: { amount },
+    headers: {
+      "X-Site-User-Token": siteUserToken,
+    },
+    redirectOnUnauthorized: false,
+  });
+}
+
+export async function fetchSiteUsers() {
+  return httpRequest<SiteUserListResponse>("/api/site-users");
+}
+
+export async function createSiteUser(payload: {
+  username: string;
+  password: string;
+  total_quota: number;
+}) {
+  return httpRequest<SiteUserListResponse>("/api/site-users", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function updateSiteUser(payload: {
+  id: string;
+  password?: string;
+  total_quota?: number;
+  used_quota?: number;
+  disabled?: boolean;
+}) {
+  return httpRequest<SiteUserListResponse>("/api/site-users", {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export async function deleteSiteUser(id: string) {
+  return httpRequest<SiteUserListResponse>("/api/site-users", {
+    method: "DELETE",
+    body: { id },
+  });
+}
+
 export async function fetchAccounts() {
   return httpRequest<AccountListResponse>("/api/accounts");
 }
@@ -726,6 +814,10 @@ export async function fetchDefaultConfig() {
   return httpRequest<ConfigPayload>("/api/config/defaults");
 }
 
+export async function fetchForbiddenWordsPreset() {
+  return httpRequest<ForbiddenWordsPresetResponse>("/api/forbidden-words/preset");
+}
+
 export async function updateConfig(config: ConfigPayload) {
   const result = await httpRequest<{ status: string; config: ConfigPayload }>("/api/config", {
     method: "PUT",
@@ -781,7 +873,7 @@ export async function downloadDiagnosticsExport() {
   const disposition = response.headers.get("content-disposition") || "";
   const match = disposition.match(/filename="([^"]+)"/i);
   const fileName =
-    match?.[1] || `chatgpt-image-studio-diagnostics-${Date.now()}.json`;
+    match?.[1] || `image2-webui-diagnostics-${Date.now()}.json`;
   return { blob, fileName };
 }
 

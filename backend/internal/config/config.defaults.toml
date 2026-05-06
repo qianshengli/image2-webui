@@ -1,10 +1,11 @@
 # 默认配置（会被后端加载）。如需自定义配置：复制本文件为 `config.toml` 并修改。
 
 [app]
-name = "chatgpt2api-studio"
+name = "image2-webui"
 version = "1.2.10"
 api_key = ""
-auth_key = "chatgpt2api"
+auth_key = "image2webui"
+forbidden_words = "minor,underage,child sexual,sexual content,nudity,explicit sex,rape,incest,bestiality,non-consensual,intimate image,deepfake,public figure,celebrity face,impersonation,fraud,hate,terrorism,extremism,self-harm,suicide,bomb,weapon tutorial,graphic violence,gore"
 image_format = "url"
 max_upload_size_mb = 50
 
@@ -64,11 +65,11 @@ image_dir = "data/tmp/image"
 image_storage = "browser"
 image_conversation_storage = "browser"
 image_data_storage = "browser"
-sqlite_path = "data/chatgpt-image-studio.db"
+sqlite_path = "data/image2-webui.db"
 redis_addr = "127.0.0.1:6379"
 redis_password = ""
 redis_db = 0
-redis_prefix = "chatgpt2api:studio"
+redis_prefix = "image2-webui"
 
 # CLIProxyAPI / CPA 同步配置。
 # 如果你暂时不需要远端号池同步，请保持 enabled=false。

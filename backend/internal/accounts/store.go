@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"chatgpt2api/handler"
-	"chatgpt2api/internal/cliproxy"
-	"chatgpt2api/internal/config"
+	"image2webui/handler"
+	"image2webui/internal/cliproxy"
+	"image2webui/internal/config"
 )
 
 const (

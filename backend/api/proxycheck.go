@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/outboundproxy"
+	"image2webui/internal/outboundproxy"
 )
 
 func (s *Server) handleProxyTest(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,7 @@ func (s *Server) handleProxyTest(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	req.Header.Set("User-Agent", "chatgpt2api-studio proxy test")
+	req.Header.Set("User-Agent", "image2-webui proxy test")
 
 	startedAt := time.Now()
 	resp, err := client.Do(req)

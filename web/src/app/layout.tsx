@@ -10,7 +10,7 @@ export default function AppShell({
   return (
     <ThemeProvider>
       <main
-        className="box-border min-h-screen overflow-y-auto bg-[#f5f5f3] p-3 text-stone-900 transition-colors duration-200 dark:bg-[var(--studio-bg)] dark:text-[var(--studio-text-strong)] lg:h-full lg:min-h-0 lg:overflow-hidden lg:p-4"
+        className="studio-surface box-border min-h-screen overflow-y-auto p-3 text-stone-900 transition-colors duration-200 dark:text-[var(--studio-text-strong)] lg:h-full lg:min-h-0 lg:overflow-hidden lg:p-4"
         style={{
           fontFamily:
             '"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif',

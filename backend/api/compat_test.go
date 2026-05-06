@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/imagehistory"
+	"image2webui/internal/accounts"
+	"image2webui/internal/config"
+	"image2webui/internal/imagehistory"
 )
 
 func TestExtractCompatPromptAndImagesFromMessages(t *testing.T) {
@@ -126,6 +126,41 @@ func TestHandleImageResponsesReturns400ForInvalidImageInput(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "invalid_image_input") {
 		t.Fatalf("body = %s, want invalid_image_input code", rec.Body.String())
+	}
+}
+
+func TestHandleImageResponsesReturnsForbiddenPromptError(t *testing.T) {
+	rootDir := t.TempDir()
+	cfg := config.New(rootDir)
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	cfg.App.ForbiddenWords = "违禁词,nsfw"
+	server := &Server{cfg: cfg}
+	body := `{
+		"model":"gpt-image-2",
+		"input":[
+			{
+				"role":"user",
+				"content":[
+					{"type":"input_text","text":"请生成违禁词内容"}
+				]
+			}
+		],
+		"tools":[{"type":"image_generation"}]
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/v1/responses", strings.NewReader(body))
+	req.Host = "example.com"
+	rec := httptest.NewRecorder()
+
+	server.handleImageResponses(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadGateway)
+	}
+	if !strings.Contains(rec.Body.String(), "forbidden_prompt") {
+		t.Fatalf("body = %s, want forbidden_prompt code", rec.Body.String())
 	}
 }
 

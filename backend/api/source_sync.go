@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/newapi"
-	"chatgpt2api/internal/sub2api"
+	"image2webui/internal/accounts"
+	"image2webui/internal/newapi"
+	"image2webui/internal/sub2api"
 )
 
 type sourceSyncStatus struct {
@@ -735,7 +735,7 @@ func cloneMap(input map[string]any) map[string]any {
 }
 
 func identityKeyFromNewAPIRemark(value string) string {
-	const prefix = "chatgpt-image-studio::"
+	const prefix = "image2-webui::"
 	trimmed := strings.TrimSpace(value)
 	if !strings.HasPrefix(trimmed, prefix) {
 		return ""

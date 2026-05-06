@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/config"
+	"image2webui/internal/config"
 )
 
 type accountStorageBackend interface {

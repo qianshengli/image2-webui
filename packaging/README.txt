@@ -1,4 +1,4 @@
-ChatGpt Image Studio
+image2 webui
 
 1. 首次启动时，程序会自动在 data/config.toml 生成本地配置文件。
 2. 主要需要关注的配置项：

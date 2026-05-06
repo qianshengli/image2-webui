@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/imagehistory"
+	"image2webui/internal/accounts"
+	"image2webui/internal/config"
+	"image2webui/internal/imagehistory"
 )
 
 func TestShouldUseOfficialResponses(t *testing.T) {

@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/cliproxy"
-	"chatgpt2api/internal/config"
+	"image2webui/internal/accounts"
+	"image2webui/internal/cliproxy"
+	"image2webui/internal/config"
 )
 
 func SetupRouter(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.Client) http.Handler {

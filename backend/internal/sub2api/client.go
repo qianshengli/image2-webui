@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"chatgpt2api/internal/outboundproxy"
+	"image2webui/internal/outboundproxy"
 )
 
 type Client struct {

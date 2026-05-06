@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"chatgpt2api/internal/config"
+	"image2webui/internal/config"
 )
 
 func TestNewStoreWithSQLiteBackendPersistsAccounts(t *testing.T) {
@@ -68,7 +68,7 @@ func TestNewStoreWithRedisBackendPersistsAccounts(t *testing.T) {
 	cfg.Storage.RedisAddr = "127.0.0.1:6379"
 	cfg.Storage.RedisPassword = "123456"
 	cfg.Storage.RedisDB = 0
-	cfg.Storage.RedisPrefix = "chatgpt2api:studio:test:" + strings.ReplaceAll(rootDir, "\\", ":")
+	cfg.Storage.RedisPrefix = "image2-webui:test:" + strings.ReplaceAll(rootDir, "\\", ":")
 	cfg.Accounts.DefaultQuota = 5
 	cfg.Accounts.RefreshWorkers = 1
 	cfg.Sync.ProviderType = "codex"
@@ -400,7 +400,7 @@ func TestImageRoutingPolicyPersistsInRedisBackend(t *testing.T) {
 	cfg.Storage.RedisAddr = "127.0.0.1:6379"
 	cfg.Storage.RedisPassword = "123456"
 	cfg.Storage.RedisDB = 0
-	cfg.Storage.RedisPrefix = "chatgpt2api:studio:test:policy:" + strings.ReplaceAll(rootDir, "\\", ":")
+	cfg.Storage.RedisPrefix = "image2-webui:test:policy:" + strings.ReplaceAll(rootDir, "\\", ":")
 	cfg.Accounts.DefaultQuota = 5
 	cfg.Accounts.RefreshWorkers = 1
 	cfg.Sync.ProviderType = "codex"

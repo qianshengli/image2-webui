@@ -24,8 +24,8 @@ RUN target_os="${TARGETOS:-$(go env GOOS)}" && \
     echo "Building backend for ${target_os}/${target_arch}" && \
     CGO_ENABLED=0 GOOS="${target_os}" GOARCH="${target_arch}" \
       go build \
-      -ldflags="-s -w -X chatgpt2api/internal/buildinfo.Version=${VERSION} -X chatgpt2api/internal/buildinfo.Commit=${COMMIT} -X chatgpt2api/internal/buildinfo.BuildTime=${BUILD_TIME}" \
-      -o /out/chatgpt2api-studio .
+      -ldflags="-s -w -X image2webui/internal/buildinfo.Version=${VERSION} -X image2webui/internal/buildinfo.Commit=${COMMIT} -X image2webui/internal/buildinfo.BuildTime=${BUILD_TIME}" \
+      -o /out/image2-webui .
 
 FROM --platform=$BUILDPLATFORM alpine:3.22 AS runtime-assets
 RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
@@ -37,10 +37,10 @@ WORKDIR /app
 COPY --from=runtime-assets /etc/ssl/certs /etc/ssl/certs
 COPY --from=runtime-assets /usr/share/zoneinfo /usr/share/zoneinfo
 
-COPY --from=backend-builder /out/chatgpt2api-studio /app/chatgpt2api-studio
+COPY --from=backend-builder /out/image2-webui /app/image2-webui
 COPY backend/internal/config/config.defaults.toml /app/data/config.example.toml
 COPY --from=web-builder /workspace/web/dist /app/static
 
 EXPOSE 7000
 
-CMD ["./chatgpt2api-studio"]
+CMD ["./image2-webui"]

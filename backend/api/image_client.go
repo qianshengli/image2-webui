@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"chatgpt2api/handler"
+	"image2webui/handler"
 )
 
 type imageDownloader interface {

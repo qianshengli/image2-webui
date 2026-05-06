@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"chatgpt2api/internal/config"
+	"image2webui/internal/config"
 )
 
 const (

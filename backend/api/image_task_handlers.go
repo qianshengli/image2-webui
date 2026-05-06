@@ -15,6 +15,10 @@ func (s *Server) handleCreateImageTask(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
 		return
 	}
+	if err := s.checkForbiddenPrompt(body.Prompt); err != nil {
+		writeImageRequestError(w, err)
+		return
+	}
 	task, err := s.imageTasks.createTask(body)
 	if err != nil {
 		writeImageRequestError(w, err)

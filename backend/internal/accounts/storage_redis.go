@@ -22,7 +22,7 @@ func newRedisAccountStorage(addr, password string, db int, prefix string) (accou
 	})
 	return &redisAccountStorage{
 		client: client,
-		prefix: firstNonEmpty(prefix, "chatgpt2api:studio"),
+		prefix: firstNonEmpty(prefix, "image2-webui"),
 	}, nil
 }
 

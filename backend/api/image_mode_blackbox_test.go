@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"chatgpt2api/handler"
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/config"
+	"image2webui/handler"
+	"image2webui/internal/accounts"
+	"image2webui/internal/config"
 )
 
 const imageModeCompatEnv = "RUN_IMAGE_MODE_COMPAT_TESTS"

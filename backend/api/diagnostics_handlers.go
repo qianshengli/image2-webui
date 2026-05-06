@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/buildinfo"
-	"chatgpt2api/internal/outboundproxy"
+	"image2webui/internal/buildinfo"
+	"image2webui/internal/outboundproxy"
 )
 
 const (
@@ -92,7 +92,7 @@ func (s *Server) handleRuntimeStatus(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleExportDiagnostics(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
-	filename := fmt.Sprintf("chatgpt-image-studio-diagnostics-%s.json", now.Format("20060102-150405"))
+	filename := fmt.Sprintf("image2-webui-diagnostics-%s.json", now.Format("20060102-150405"))
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	writeJSON(w, http.StatusOK, diagnosticsExportPayload{
 		GeneratedAt: now.Format(time.RFC3339Nano),
@@ -311,7 +311,7 @@ func probeEndpoint(parent context.Context, targetURL, proxyURL string, timeout t
 	if err != nil {
 		return 0, err
 	}
-	req.Header.Set("User-Agent", "chatgpt-image-studio/diagnostics")
+	req.Header.Set("User-Agent", "image2-webui/diagnostics")
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, err

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/configstore"
+	"image2webui/internal/config"
+	"image2webui/internal/configstore"
 )
 
 func TestApplyEnvConfigOverridesSetsStorageBootstrap(t *testing.T) {
@@ -22,7 +22,7 @@ func TestApplyEnvConfigOverridesSetsStorageBootstrap(t *testing.T) {
 	t.Setenv("REDIS_ADDR", "127.0.0.1:6379")
 	t.Setenv("REDIS_PASSWORD", "123456")
 	t.Setenv("REDIS_DB", "0")
-	t.Setenv("REDIS_PREFIX", "chatgpt2api:test:env")
+	t.Setenv("REDIS_PREFIX", "image2webui:test:env")
 
 	if err := applyEnvConfigOverrides(cfg); err != nil {
 		t.Fatalf("applyEnvConfigOverrides() returned error: %v", err)
@@ -51,7 +51,7 @@ func TestLoadRedisConfigOverrides(t *testing.T) {
 	cfg.Storage.RedisAddr = "127.0.0.1:6379"
 	cfg.Storage.RedisPassword = "123456"
 	cfg.Storage.RedisDB = 0
-	cfg.Storage.RedisPrefix = "chatgpt2api:test:main"
+	cfg.Storage.RedisPrefix = "image2webui:test:main"
 
 	store := configstore.NewRedis(
 		cfg.Storage.RedisAddr,

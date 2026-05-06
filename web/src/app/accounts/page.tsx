@@ -964,7 +964,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="hide-scrollbar h-full min-h-0 overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] sm:px-5 sm:py-6 lg:px-6 lg:py-7">
+    <div className="admin-flat-radius hide-scrollbar h-full min-h-0 overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:px-5 sm:py-6 lg:px-6 lg:py-7">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="inline-flex size-12 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
@@ -1123,7 +1123,7 @@ export default function AccountsPage() {
       </Dialog>
 
       <section className="mt-6 space-y-4">
-        <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+        <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
           <CardContent className="space-y-4 p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-1">
@@ -1300,7 +1300,7 @@ export default function AccountsPage() {
                   ).map(([label, value]) => (
                     <div
                       key={label}
-                      className="rounded-2xl border border-stone-100 bg-stone-50 px-3 py-3 md:px-4 md:py-4"
+                      className="rounded-2xl border border-stone-100 bg-stone-50 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)] px-3 py-3 md:px-4 md:py-4"
                     >
                       <div className="text-xs font-medium text-stone-400">
                         {label}
@@ -1350,7 +1350,7 @@ export default function AccountsPage() {
             return (
               <Card
                 key={item.key}
-                className="rounded-2xl border-white/80 bg-white/90 shadow-sm"
+                className="rounded-2xl border-white/80 bg-white/90 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
               >
                 <CardContent className="p-2.5 md:p-4">
                   <div className="mb-2 flex items-start justify-between md:mb-4">
@@ -1394,7 +1394,7 @@ export default function AccountsPage() {
             <h2 className="text-lg font-semibold tracking-tight">账户列表</h2>
             <Badge
               variant="secondary"
-              className="rounded-lg bg-stone-200 px-2 py-0.5 text-stone-700"
+              className="rounded-lg bg-stone-200 px-2 py-0.5 text-stone-700 dark:bg-[#303030] dark:text-[var(--studio-text-strong)]"
             >
               {filteredAccounts.length}
             </Badge>
@@ -1402,7 +1402,7 @@ export default function AccountsPage() {
 
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="relative w-full min-w-0 lg:w-[260px]">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-stone-400" />
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-stone-400 dark:text-[var(--studio-text-muted)]" />
               <Input
                 value={query}
                 onChange={(event) => {
@@ -1410,7 +1410,7 @@ export default function AccountsPage() {
                   setPage(1);
                 }}
                 placeholder="搜索邮箱 / 文件名 / 备注"
-                className="h-10 rounded-xl border-stone-200 bg-white/85 pl-10"
+                className="h-10 rounded-xl border-stone-200 bg-white/85 pl-10 text-stone-700 placeholder:text-stone-400 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)] dark:text-[var(--studio-text-strong)] dark:placeholder:text-[var(--studio-text-muted)]"
               />
             </div>
             <Select
@@ -1420,7 +1420,7 @@ export default function AccountsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="h-10 w-full rounded-xl border-stone-200 bg-white/85 lg:w-[150px]">
+              <SelectTrigger className="h-10 w-full rounded-xl border-stone-200 bg-white/85 text-stone-700 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)] dark:text-[var(--studio-text-strong)] lg:w-[150px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1438,7 +1438,7 @@ export default function AccountsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="h-10 w-full rounded-xl border-stone-200 bg-white/85 lg:w-[150px]">
+              <SelectTrigger className="h-10 w-full rounded-xl border-stone-200 bg-white/85 text-stone-700 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)] dark:text-[var(--studio-text-strong)] lg:w-[150px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1480,7 +1480,7 @@ export default function AccountsPage() {
         </div>
 
         {isLoading && accounts.length === 0 ? (
-          <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+          <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
             <CardContent className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
               <div className="rounded-xl bg-stone-100 p-3 text-stone-500">
                 <LoaderCircle className="size-5 animate-spin" />
@@ -1498,7 +1498,7 @@ export default function AccountsPage() {
         ) : null}
 
         {refreshAllRun ? (
-          <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+          <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
             <CardContent className="space-y-3 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
@@ -1674,7 +1674,7 @@ export default function AccountsPage() {
                     return (
                       <div
                         key={account.id}
-                        className="rounded-2xl border border-stone-200/80 bg-stone-50/60 p-3.5"
+                        className="rounded-2xl border border-stone-200/80 bg-stone-50/60 p-3.5 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -1786,7 +1786,7 @@ export default function AccountsPage() {
                         </div>
 
                         <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-stone-500">
-                          <div className="rounded-xl bg-white px-3 py-2.5">
+                          <div className="rounded-xl bg-white px-3 py-2.5 dark:bg-[#262626]">
                             <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
                               图片额度
                             </div>
@@ -1799,7 +1799,7 @@ export default function AccountsPage() {
                               本地额度 {formatQuota(account.quota)}
                             </div>
                           </div>
-                          <div className="rounded-xl bg-white px-3 py-2.5">
+                          <div className="rounded-xl bg-white px-3 py-2.5 dark:bg-[#262626]">
                             <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
                               图片重置
                             </div>
@@ -1814,7 +1814,7 @@ export default function AccountsPage() {
                               {imageGenRestore.absoluteShort}
                             </div>
                           </div>
-                          <div className="rounded-xl bg-white px-3 py-2.5">
+                          <div className="rounded-xl bg-white px-3 py-2.5 dark:bg-[#262626]">
                             <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
                               成功
                             </div>
@@ -1822,7 +1822,7 @@ export default function AccountsPage() {
                               {account.success}
                             </div>
                           </div>
-                          <div className="rounded-xl bg-white px-3 py-2.5">
+                          <div className="rounded-xl bg-white px-3 py-2.5 dark:bg-[#262626]">
                             <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
                               失败
                             </div>

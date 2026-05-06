@@ -17,14 +17,14 @@ import (
 	"sync"
 	"time"
 
-	"chatgpt2api/handler"
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/buildinfo"
-	"chatgpt2api/internal/cliproxy"
-	"chatgpt2api/internal/config"
-	"chatgpt2api/internal/middleware"
-	"chatgpt2api/internal/newapi"
-	"chatgpt2api/internal/sub2api"
+	"image2webui/handler"
+	"image2webui/internal/accounts"
+	"image2webui/internal/buildinfo"
+	"image2webui/internal/cliproxy"
+	"image2webui/internal/config"
+	"image2webui/internal/middleware"
+	"image2webui/internal/newapi"
+	"image2webui/internal/sub2api"
 )
 
 type Server struct {
@@ -50,6 +50,7 @@ type Server struct {
 	cachedNewAPIKey        string
 	cachedSub2APIClient    *sub2api.Client
 	cachedSub2APIKey       string
+	siteUsers              *siteUserStore
 }
 
 type requestError struct {
@@ -126,6 +127,7 @@ func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.C
 				cfg.SyncProxyURL(),
 			)
 		},
+		siteUsers: newSiteUserStore(cfg.ResolvePath("backend/data/site_users.json")),
 	}
 	server.imageTasks = newImageTaskManager(server)
 	return server
@@ -377,6 +379,9 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("POST /auth/login", http.HandlerFunc(s.handleLogin))
+	mux.Handle("POST /site-users/login", http.HandlerFunc(s.handleSiteUserLogin))
+	mux.Handle("GET /site-users/me", s.requireSiteUserAuth(http.HandlerFunc(s.handleSiteUserMe)))
+	mux.Handle("POST /site-users/quota/consume", s.requireSiteUserAuth(http.HandlerFunc(s.handleConsumeSiteUserQuota)))
 	mux.Handle("GET /version", http.HandlerFunc(s.handleVersion))
 	mux.Handle("GET /health", http.HandlerFunc(handleHealth))
 
@@ -389,11 +394,16 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/accounts/refresh-all", s.requireUIAuth(http.HandlerFunc(s.handleRefreshAllAccounts)))
 	mux.Handle("GET /api/accounts/refresh-progress", s.requireUIAuth(http.HandlerFunc(s.handleAccountRefreshProgress)))
 	mux.Handle("POST /api/accounts/update", s.requireUIAuth(http.HandlerFunc(s.handleUpdateAccount)))
+	mux.Handle("GET /api/site-users", s.requireUIAuth(http.HandlerFunc(s.handleListSiteUsers)))
+	mux.Handle("POST /api/site-users", s.requireUIAuth(http.HandlerFunc(s.handleCreateSiteUser)))
+	mux.Handle("PUT /api/site-users", s.requireUIAuth(http.HandlerFunc(s.handleUpdateSiteUser)))
+	mux.Handle("DELETE /api/site-users", s.requireUIAuth(http.HandlerFunc(s.handleDeleteSiteUser)))
 	mux.Handle("GET /api/accounts/image-policy", s.requireUIAuth(http.HandlerFunc(s.handleGetImageAccountPolicy)))
 	mux.Handle("PUT /api/accounts/image-policy", s.requireUIAuth(http.HandlerFunc(s.handleUpdateImageAccountPolicy)))
 	mux.Handle("GET /api/config", s.requireUIAuth(http.HandlerFunc(s.handleGetConfig)))
 	mux.Handle("GET /api/config/defaults", s.requireUIAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
 	mux.Handle("PUT /api/config", s.requireUIAuth(http.HandlerFunc(s.handleUpdateConfig)))
+	mux.Handle("GET /api/forbidden-words/preset", s.requireUIAuth(http.HandlerFunc(s.handleGetForbiddenWordsPreset)))
 	mux.Handle("POST /api/proxy/test", s.requireUIAuth(http.HandlerFunc(s.handleProxyTest)))
 	mux.Handle("POST /api/integration/test", s.requireUIAuth(http.HandlerFunc(s.handleIntegrationTest)))
 	mux.Handle("POST /api/integration/newapi/token", s.requireUIAuth(http.HandlerFunc(s.handleNewAPITokenDiscover)))
@@ -1627,6 +1637,23 @@ func parseKeys(raw string) []string {
 		}
 	}
 	return result
+}
+
+func (s *Server) checkForbiddenPrompt(prompt string) error {
+	trimmedPrompt := strings.TrimSpace(prompt)
+	if trimmedPrompt == "" {
+		return nil
+	}
+	normalizedPrompt := strings.ToLower(trimmedPrompt)
+	for _, word := range s.cfg.ForbiddenPromptWords() {
+		if word == "" {
+			continue
+		}
+		if strings.Contains(normalizedPrompt, word) {
+			return newRequestError("forbidden_prompt", "提示词包含违禁词，已拒绝本次图片请求")
+		}
+	}
+	return nil
 }
 
 func resolveStaticAsset(staticDir, requestPath string) string {

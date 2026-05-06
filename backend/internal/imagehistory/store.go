@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/config"
+	"image2webui/internal/config"
 
 	"github.com/redis/go-redis/v9"
 	_ "modernc.org/sqlite"
@@ -111,7 +111,7 @@ func NewStore(cfg *config.Config) (*Store, error) {
 				Password: cfg.Storage.RedisPassword,
 				DB:       cfg.Storage.RedisDB,
 			}),
-			prefix: firstNonEmpty(cfg.Storage.RedisPrefix, "chatgpt2api:studio") + ":image_history",
+			prefix: firstNonEmpty(cfg.Storage.RedisPrefix, "image2-webui") + ":image_history",
 		}
 	default:
 		storage = &fileBackend{dir: cfg.ResolvePath(defaultHistoryDir)}

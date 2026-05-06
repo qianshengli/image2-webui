@@ -65,6 +65,7 @@ function defaultConfigPayload(): ConfigPayload {
       version: "",
       apiKey: "",
       authKey: "",
+      forbiddenWords: "",
       imageFormat: "url",
       maxUploadSizeMB: 50,
     },
@@ -110,7 +111,7 @@ function defaultConfigPayload(): ConfigPayload {
       redisAddr: "127.0.0.1:6379",
       redisPassword: "",
       redisDb: 0,
-      redisPrefix: "chatgpt2api:studio",
+      redisPrefix: "image2-webui",
     },
     sync: {
       enabled: false,
@@ -445,7 +446,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <section className="h-full">
+    <section className="admin-flat-radius h-full">
       <div className="hide-scrollbar h-full min-h-0 overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 pb-5 pt-0 shadow-[0_14px_40px_rgba(15,23,42,0.05)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:px-5 sm:pb-6 sm:pt-0 lg:px-6 lg:pb-7 lg:pt-0">
         <div className="sticky top-0 z-20 -mx-4 bg-[#fcfcfb] px-4 pt-5 pb-4 transition-colors duration-200 dark:bg-[var(--studio-panel)] sm:-mx-5 sm:px-5 sm:pt-6 sm:pb-4 lg:-mx-6 lg:px-6 lg:pt-7 lg:pb-5">
           <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -463,7 +464,7 @@ export default function SettingsPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 w-full justify-center rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none sm:w-auto"
+                className="h-10 w-full justify-center rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] sm:w-auto"
                 onClick={() => {
                   window.location.href = "/startup-check";
                 }}
@@ -475,7 +476,7 @@ export default function SettingsPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 w-full justify-center rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none sm:w-auto"
+                className="h-10 w-full justify-center rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] sm:w-auto"
                 onClick={() => void loadConfig()}
                 disabled={isLoading || isSaving}
               >
@@ -489,7 +490,7 @@ export default function SettingsPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 w-full justify-center rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none sm:w-auto"
+                className="h-10 w-full justify-center rounded-full border-stone-200 bg-white px-3 text-[13px] text-stone-700 shadow-none dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] sm:w-auto"
                 onClick={restoreDefaults}
                 disabled={isLoading || isSaving}
               >
@@ -514,7 +515,7 @@ export default function SettingsPage() {
         </div>
 
         {storageMigrationNotice ? (
-          <div className="mt-1 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+          <div className="mt-1 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
             {storageMigrationNotice}
           </div>
         ) : null}

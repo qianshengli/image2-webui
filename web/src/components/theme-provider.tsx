@@ -11,22 +11,21 @@ import {
 } from "react";
 import { Toaster } from "sonner";
 
-type ThemeMode = "light" | "graphite" | "dark";
+type ThemeMode = "light" | "dark";
 
 type ThemeContextValue = {
   themeMode: ThemeMode;
   isDark: boolean;
-  isDarkLike: boolean;
   setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
 };
 
-const THEME_STORAGE_KEY = "chatgpt-image-studio:theme";
+const THEME_STORAGE_KEY = "image2-webui:theme";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function normalizeThemeMode(value: string | null | undefined): ThemeMode {
-  if (value === "dark" || value === "graphite") {
+  if (value === "dark") {
     return value;
   }
   return "light";
@@ -48,12 +47,11 @@ function applyThemeMode(mode: ThemeMode) {
     return;
   }
   const root = document.documentElement;
-  const isDarkLike = mode !== "light";
-  root.classList.toggle("dark", isDarkLike);
+  const isDark = mode === "dark";
+  root.classList.toggle("dark", isDark);
   root.classList.toggle("theme-dark", mode === "dark");
-  root.classList.toggle("theme-graphite", mode === "graphite");
   root.dataset.theme = mode;
-  root.style.colorScheme = isDarkLike ? "dark" : "light";
+  root.style.colorScheme = isDark ? "dark" : "light";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -91,20 +89,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       themeMode,
       isDark: themeMode === "dark",
-      isDarkLike: themeMode !== "light",
       setThemeMode: (mode) => {
         setThemeModeState((current) => (current === mode ? current : mode));
       },
       toggleTheme: () => {
-        setThemeModeState((current) => {
-          if (current === "light") {
-            return "graphite";
-          }
-          if (current === "graphite") {
-            return "dark";
-          }
-          return "light";
-        });
+        setThemeModeState((current) => (current === "light" ? "dark" : "light"));
       },
     }),
     [themeMode],

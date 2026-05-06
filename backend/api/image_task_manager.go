@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"chatgpt2api/internal/accounts"
-	"chatgpt2api/internal/imagehistory"
+	"image2webui/internal/accounts"
+	"image2webui/internal/imagehistory"
 )
 
 const maxImageTaskParallelUnitsPerTask = 2

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/handler"
+	"image2webui/handler"
 )
 
 type cpaImageClient struct {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode, type RefObject } from "react";
 import Zoom from "react-medium-image-zoom";
-import { ArrowUp, Brush, ChevronDown, CircleHelp, ImagePlus, Trash2 } from "lucide-react";
+import { ArrowUp, Brush, ChevronDown, CircleHelp, ImagePlus, Trash2, Wand2 } from "lucide-react";
 
 import { AppImage as Image } from "@/components/app-image";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,6 @@ type PromptComposerProps = {
   imagePrompt: string;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   uploadInputRef: RefObject<HTMLInputElement | null>;
-  maskInputRef: RefObject<HTMLInputElement | null>;
   onModeChange: (mode: ImageMode) => void;
   onImageCountChange: (value: string) => void;
   onImageAspectRatioChange: (value: string) => void;
@@ -51,6 +50,8 @@ type PromptComposerProps = {
   onOpenSourceSelectionEditor: (sourceImageId: string) => void;
   onAppendFiles: (files: FileList | null, role: "image" | "mask") => Promise<void>;
   onMobileCollapsedChange?: (collapsed: boolean) => void;
+  allowSourceUpload?: boolean;
+  submitDisabled?: boolean;
   onSubmit: () => Promise<void>;
 };
 
@@ -73,7 +74,6 @@ export function PromptComposer({
   imagePrompt,
   textareaRef,
   uploadInputRef,
-  maskInputRef,
   onModeChange,
   onImageCountChange,
   onImageAspectRatioChange,
@@ -85,6 +85,8 @@ export function PromptComposer({
   onOpenSourceSelectionEditor,
   onAppendFiles,
   onMobileCollapsedChange,
+  allowSourceUpload = true,
+  submitDisabled = false,
   onSubmit,
 }: PromptComposerProps) {
   const imageQualityLabel = imageQualityOptions.find((item) => item.value === imageQuality)?.label ?? imageQuality;
@@ -92,6 +94,10 @@ export function PromptComposer({
   const sizeHintAriaLabel = mode === "edit" ? "查看编辑输出说明" : "查看分辨率说明";
   const imageQualityPrefix = mode === "edit" ? "输出质量" : "质量";
   const hasComposerContent = imagePrompt.trim().length > 0 || sourceImages.length > 0;
+  const editableSourceImage = useMemo(
+    () => sourceImages.find((item) => item.role === "image") ?? null,
+    [sourceImages],
+  );
   const previousHasComposerContentRef = useRef(hasComposerContent);
   const [isMobileComposerExpanded, setIsMobileComposerExpanded] = useState(hasComposerContent);
   const isMobileComposerCollapsed = !isMobileComposerExpanded;
@@ -110,6 +116,42 @@ export function PromptComposer({
   useEffect(() => {
     onMobileCollapsedChange?.(isMobileComposerCollapsed);
   }, [isMobileComposerCollapsed, onMobileCollapsedChange]);
+
+  useEffect(() => {
+    const handleGlobalShortcut = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = String(target?.tagName || "").toLowerCase();
+      const isEditable =
+        tagName === "input" ||
+        tagName === "textarea" ||
+        Boolean(target?.isContentEditable);
+
+      if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !isEditable) {
+        event.preventDefault();
+        setIsMobileComposerExpanded(true);
+        textareaRef.current?.focus();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        if (!submitDisabled) {
+          void onSubmit();
+        }
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setIsMobileComposerExpanded(false);
+        textareaRef.current?.blur();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalShortcut);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalShortcut);
+    };
+  }, [onSubmit, submitDisabled, textareaRef]);
 
   const sizeHintTooltip =
     showImageOutputControls ? (
@@ -133,7 +175,7 @@ export function PromptComposer({
         "fixed inset-x-0 bottom-0 z-30 px-3 backdrop-blur supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 lg:static lg:inset-auto lg:bottom-auto lg:z-20 lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:bg-white lg:px-5 lg:shadow-none dark:lg:border-[var(--studio-border)] dark:lg:bg-[var(--studio-panel-soft)]",
         isMobileComposerCollapsed
           ? "border-transparent bg-white/96 shadow-none dark:bg-[color:var(--studio-bg)]"
-          : "rounded-[26px] border border-stone-200 bg-white/96 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)] dark:border-[var(--studio-border)] dark:bg-[color:var(--studio-bg)] dark:shadow-[0_24px_70px_-30px_rgba(0,0,0,0.82)]",
+          : "rounded-xl border border-stone-200 bg-white/96 shadow-[0_14px_40px_-24px_rgba(15,23,42,0.32)] dark:border-[var(--studio-border)] dark:bg-[color:var(--studio-bg)] dark:shadow-[0_18px_50px_-30px_rgba(0,0,0,0.72)]",
         isMobileComposerCollapsed ? "py-1 sm:py-1.5" : "py-1 sm:py-1.5",
         "lg:border-stone-200 lg:bg-white lg:py-2 lg:shadow-none",
       )}
@@ -146,24 +188,19 @@ export function PromptComposer({
           )}
         >
           <div className="flex items-center gap-2">
-            <div className="hide-scrollbar min-w-0 flex-1 -mx-1 overflow-x-auto px-1 xl:mx-0 xl:px-0">
-              <div className="inline-flex min-w-max rounded-full bg-stone-100 p-1">
-                {modeOptions.map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    onClick={() => onModeChange(item.value)}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-[13px] font-medium transition sm:px-4 sm:py-2 sm:text-sm",
-                      mode === item.value
-                        ? "bg-stone-950 text-white shadow-sm dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)]"
-                        : "text-stone-600 hover:bg-stone-200 hover:text-stone-900 dark:text-[var(--studio-text)] dark:hover:bg-[var(--studio-panel-muted)] dark:hover:text-[var(--studio-text-strong)]",
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+            <div className="min-w-0 flex-1">
+              <Select value={mode} onValueChange={(value) => onModeChange(value as ImageMode)}>
+                <SelectTrigger className="h-9 w-full rounded-md border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-10 sm:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {modeOptions.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {isMobileComposerExpanded ? (
               <button
@@ -185,7 +222,7 @@ export function PromptComposer({
           <div className="hide-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
             {showImageOutputControls ? (
               <Select value={imageAspectRatio} onValueChange={onImageAspectRatioChange}>
-                <SelectTrigger className="h-9 w-[84px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-10 sm:w-[108px] sm:text-sm">
+                <SelectTrigger className="h-9 w-[84px] shrink-0 rounded-md border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-10 sm:w-[108px] sm:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -201,7 +238,7 @@ export function PromptComposer({
             {showImageOutputControls ? (
               <Select value={imageResolutionTier} onValueChange={onImageResolutionTierChange}>
                 <SelectTrigger
-                  className="h-9 w-[168px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-10 sm:w-[238px] sm:text-sm"
+                  className="h-9 w-[168px] shrink-0 rounded-md border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-10 sm:w-[238px] sm:text-sm"
                   title={imageResolutionTierLabel}
                 >
                   <SelectValue>{imageResolutionTierLabel}</SelectValue>
@@ -222,7 +259,7 @@ export function PromptComposer({
               <Select value={imageQuality} onValueChange={onImageQualityChange} disabled={imageQualityDisabled}>
                 <SelectTrigger
                   className={cn(
-                    "h-10 w-[136px] shrink-0 rounded-full border-stone-200 bg-white text-sm font-medium text-stone-700 shadow-none focus-visible:ring-0",
+                    "h-10 w-[136px] shrink-0 rounded-md border-stone-200 bg-white text-sm font-medium text-stone-700 shadow-none focus-visible:ring-0",
                     "h-9 w-[108px] text-[13px] sm:h-10 sm:w-[136px] sm:text-sm",
                     imageQualityDisabled && "cursor-not-allowed bg-stone-50 text-stone-400 opacity-80",
                   )}
@@ -245,7 +282,7 @@ export function PromptComposer({
             ) : null}
 
             {mode === "generate" ? (
-              <div className="flex shrink-0 items-center gap-1 rounded-full border border-stone-200 bg-white px-2 py-0.5 sm:gap-1.5 sm:px-2.5 sm:py-1">
+              <div className="flex shrink-0 items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-0.5 sm:gap-1.5 sm:px-2.5 sm:py-1">
                 <span className="text-[13px] font-medium text-stone-700 sm:text-sm">张数</span>
                 <Input
                   type="number"
@@ -259,14 +296,14 @@ export function PromptComposer({
               </div>
             ) : null}
 
-            <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1.5 text-[11px] font-medium text-stone-600 sm:px-3 sm:py-2 sm:text-xs">
+            <span className="shrink-0 rounded-md bg-stone-100 px-2.5 py-1.5 text-[11px] font-medium text-stone-600 sm:px-3 sm:py-2 sm:text-xs">
               剩余额度 {availableQuota}
             </span>
           </div>
         </div>
 
           <div
-          className="overflow-hidden rounded-[24px] border border-stone-200 bg-[#fafaf9] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:rounded-[28px]"
+          className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:rounded-xl"
           onClick={() => {
             setIsMobileComposerExpanded(true);
             textareaRef.current?.focus();
@@ -328,12 +365,12 @@ export function PromptComposer({
             </div>
           ) : null}
 
-          <div className="relative px-3 pb-1.5 pt-2 sm:px-4 sm:pb-2 sm:pt-2.5">
+          <div className="relative px-3 pb-2 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-3">
             {isMobileComposerCollapsed ? (
               <>
                 <button
                   type="button"
-                  className="flex min-h-[22px] w-full items-center px-1 py-0 text-left text-[14px] leading-5 text-stone-400 sm:hidden"
+                  className="flex min-h-[36px] w-full items-center rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-left text-[13px] leading-6 text-stone-500 sm:hidden"
                   onClick={() => {
                     setIsMobileComposerExpanded(true);
                     textareaRef.current?.focus();
@@ -364,7 +401,7 @@ export function PromptComposer({
                       void onSubmit();
                     }
                   }}
-                  className="hidden resize-none border-0 bg-transparent !px-1 !pb-1 text-[14px] text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 sm:block sm:min-h-[38px] sm:max-h-[70px] sm:overflow-y-auto sm:!pt-1 sm:pr-10 sm:text-[15px] sm:leading-7"
+                  className="hidden resize-none border-0 bg-transparent !px-2 !pb-2 text-[14px] text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 sm:block sm:min-h-[38px] sm:max-h-[70px] sm:overflow-y-auto sm:!pt-2 sm:pr-10 sm:text-[15px] sm:leading-7"
                   onFocus={() => setIsMobileComposerExpanded(true)}
                 />
               </>
@@ -387,37 +424,89 @@ export function PromptComposer({
                     void onSubmit();
                   }
                 }}
-                className="resize-none border-0 bg-transparent !px-1 !pb-1 text-[14px] text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 min-h-[30px] max-h-[70px] overflow-y-auto !pt-1 pr-10 leading-6 sm:min-h-[38px] sm:text-[15px] sm:leading-7"
+                className="resize-none border-0 bg-transparent !px-2 !pb-2 text-[14px] text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 min-h-[34px] max-h-[70px] overflow-y-auto !pt-2 pr-10 leading-6 sm:min-h-[38px] sm:text-[15px] sm:leading-7"
                 onFocus={() => setIsMobileComposerExpanded(true)}
               />
             )}
           </div>
           <div className={cn("px-3 pb-1.5 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-2.5", showMobileExpandedSections ? "block" : "hidden lg:block")}>
             <div className="flex items-end justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 rounded-full border-stone-200 bg-white px-2 text-[11px] font-medium text-stone-700 shadow-none sm:h-8 sm:px-2.5 sm:text-xs"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    uploadInputRef.current?.click();
-                  }}
-                >
-                  <ImagePlus className="size-3.5" />
-                  {mode === "generate" ? "上传参考图" : "上传源图"}
-                </Button>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                {allowSourceUpload ? (
+                  mode === "edit" ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-full border-stone-300 bg-white px-3 text-xs font-semibold text-stone-700 shadow-none"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          uploadInputRef.current?.click();
+                        }}
+                      >
+                        <ImagePlus className="size-3.5" />
+                        上传原图
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "h-8 rounded-full border-stone-300 bg-white px-3 text-xs font-semibold text-stone-700 shadow-none",
+                          !editableSourceImage && "border-stone-200 bg-stone-100 text-stone-400",
+                        )}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!editableSourceImage) {
+                            uploadInputRef.current?.click();
+                            return;
+                          }
+                          onOpenSourceSelectionEditor(editableSourceImage.id);
+                        }}
+                        disabled={!editableSourceImage}
+                        title={!editableSourceImage ? "请先上传原图" : "打开遮罩编辑器"}
+                      >
+                        <Brush className="size-3.5" />
+                        {editableSourceImage ? "直接涂抹遮罩" : "请先上传原图"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-full border-stone-300 bg-white px-3 text-xs font-semibold text-stone-700 shadow-none"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        uploadInputRef.current?.click();
+                      }}
+                    >
+                      <ImagePlus className="size-3.5" />
+                      上传参考图
+                    </Button>
+                  )
+                ) : null}
 
+                </div>
+                {mode === "edit" ? (
+                  <p className="text-[11px] leading-5 text-stone-500">
+                    上传原图后点“直接涂抹遮罩”，在原图上框选修改区域，无需单独上传遮罩图。
+                  </p>
+                ) : null}
               </div>
 
               <button
                 type="button"
                 onClick={() => void onSubmit()}
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-stone-950 text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)] dark:disabled:bg-[var(--studio-panel-muted)] dark:disabled:text-[var(--studio-text-muted)] sm:size-9"
+                disabled={submitDisabled}
+                className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md bg-stone-950 px-2.5 text-xs font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)] dark:disabled:bg-[var(--studio-panel-muted)] dark:disabled:text-[var(--studio-text-muted)] sm:h-9 sm:px-3"
                 aria-label="提交图片任务"
               >
-                <ArrowUp className="size-4" />
+                <Wand2 className="size-3.5" />
+                生成
+                <ArrowUp className="size-3.5" />
               </button>
             </div>
           </div>

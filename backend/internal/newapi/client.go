@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"chatgpt2api/internal/outboundproxy"
+	"image2webui/internal/outboundproxy"
 )
 
 const codexChannelType = 57
@@ -160,7 +160,7 @@ func (c *Client) CreateCodexChannel(ctx context.Context, name, identityKey, acco
 			"group":      "default",
 			"priority":   0,
 			"key":        string(keyPayload),
-			"remark":     "chatgpt-image-studio::" + strings.TrimSpace(identityKey),
+			"remark":     "image2-webui::" + strings.TrimSpace(identityKey),
 			"other_info": string(otherInfoBytes),
 		},
 	}

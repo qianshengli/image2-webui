@@ -108,7 +108,7 @@ func TestNormalizeRootPrefersExecutableConfigRoot(t *testing.T) {
 		return workingDir, nil
 	}
 	osExecutable = func() (string, error) {
-		return filepath.Join(releaseDir, "chatgpt-image-studio.exe"), nil
+		return filepath.Join(releaseDir, "image2-webui.exe"), nil
 	}
 
 	if got := normalizeRoot(""); got != releaseDir {
