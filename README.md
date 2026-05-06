@@ -101,7 +101,7 @@ go build -C backend -o ../dist/image2-webui .
 
 默认镜像仓库与标签在 `docker-compose.yml` 中可配置：
 
-- `IMAGE_REPO`（默认 `docker.io/peiyizhi0724/image2-webui`）
+- `IMAGE_REPO`（默认 `docker.io/qq1090188816/image2-webui`）
 - `IMAGE_TAG`（默认 `latest`）
 
 ### 首次启动

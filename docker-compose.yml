@@ -1,11 +1,11 @@
 services:
   studio:
-    image: ghcr.io/peiyizhi0724/chatgpt-image-studio:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REPO:-docker.io/qq1090188816/image2-webui}:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VERSION: ${IMAGE_TAG:-dev}
+        VERSION: ${BUILD_VERSION:-dev}
         COMMIT: ${IMAGE_COMMIT:-local}
         BUILD_TIME: ${IMAGE_BUILD_TIME:-local}
     ports:
